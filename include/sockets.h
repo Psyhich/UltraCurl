@@ -19,7 +19,7 @@ namespace Sockets
 	public:
 		CSocket(const std::string& addressToUse);
 		virtual std::optional<std::vector<char>> ReadTillEnd() noexcept = 0;
-		virtual bool Write(const std::vector<char>& cBytes)  noexcept = 0;
+		virtual bool Write(const char* pcchBytes, size_t nCount)  noexcept = 0;
 		virtual ~CSocket() {}
 	protected:
 		inline const URI& GetAddress() { return m_address; }
@@ -34,7 +34,7 @@ namespace Sockets
 		~CTcpSocket() override;
 		
 		std::optional<std::vector<char>> ReadTillEnd() noexcept override;
-		bool Write(const std::vector<char> &cBytes) noexcept override;
+		bool Write(const char* pcchBytes, size_t nCount) noexcept override;
 
 		CTcpSocket(const CTcpSocket &cSockeToCopy) = delete;
 		CTcpSocket operator=(const CTcpSocket &cSockeToCopy) = delete;

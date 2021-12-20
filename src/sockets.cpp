@@ -41,6 +41,7 @@ std::optional<sockaddr> Sockets::CTcpSocket::GetSocketAddress(
 		if(getaddrinfo(cAddress->c_str(), HTTP_SERVICE, &addressHint, &ppResolvedHosts) != 0 || 
 			ppResolvedHosts == nullptr)
 		{
+			fprintf(stderr, "Failed to resolve given address\n");
 			return std::nullopt;
 		}
 		const sockaddr cFirstAddress = *ppResolvedHosts[0].ai_addr;
@@ -58,7 +59,7 @@ Sockets::CTcpSocket::CTcpSocket(
 	std::optional<sockaddr> cResolvedAddress = GetSocketAddress(GetAddress());
 	if(!cResolvedAddress)
 	{
-		fprintf(stderr, "Failed to resolve given address");
+		fprintf(stderr, "Failed to resolve given address\n");
 		return;
 	}
 
@@ -66,7 +67,7 @@ Sockets::CTcpSocket::CTcpSocket(
 	// If we got wrongly written port returning nullopt
 	if(!uiPort)
 	{
-		fprintf(stderr, "Given port is invalid");
+		fprintf(stderr, "Given port is invalid\n");
 		return;
 	}
 	
@@ -74,7 +75,7 @@ Sockets::CTcpSocket::CTcpSocket(
 	m_iSocketFD = socket(cResolvedAddress->sa_family, SOCK_STREAM, 0);
 	if(m_iSocketFD == -1)
 	{
-		fprintf(stderr, "Failed to create socket");
+		fprintf(stderr, "Failed to create socket\n");
 		return;
 	}
 
@@ -83,7 +84,7 @@ Sockets::CTcpSocket::CTcpSocket(
 
 	if(connect(m_iSocketFD, &*cResolvedAddress, sizeof(*cResolvedAddress)) == -1)
 	{
-		fprintf(stderr, "Failed to connect to given address");
+		fprintf(stderr, "Failed to connect to given address\n");
 		close(m_iSocketFD);
 		m_iSocketFD = -1;
 		return;
@@ -102,7 +103,7 @@ std::optional<std::vector<char>> Sockets::CTcpSocket::ReadTillEnd() noexcept
 {
 	if(m_iSocketFD == -1)
 	{
-		fprintf(stderr, "The given socket doesn't exist or it's not opened");
+		fprintf(stderr, "The given socket doesn't exist or it's not opened\n");
 		return std::nullopt;
 	}
 	
@@ -119,13 +120,13 @@ std::optional<std::vector<char>> Sockets::CTcpSocket::ReadTillEnd() noexcept
 		nRecivedBytes = recv(m_iSocketFD, chBuffer, sizeof(char) * BUFFER_SIZE, 0);
 		if(nRecivedBytes == -1)
 		{
-			fprintf(stderr, "Error while reciving data");
+			fprintf(stderr, "Error while reciving data\n");
 			return std::nullopt;
 		} else if(nRecivedBytes == 0)
 		{
 			// FIXME: rarely block of recived data can be equeal 
 			// To BUFFER_SIZE and it will roll into such error
-			fprintf(stderr, "Closed before reciving all");
+			fprintf(stderr, "Closed before reciving all\n");
 		}
 		for(ssize_t nCount = 0; nCount < nRecivedBytes; nCount++)
 		{
@@ -138,6 +139,31 @@ std::optional<std::vector<char>> Sockets::CTcpSocket::ReadTillEnd() noexcept
 	return messageVector;
 }
 
-/*bool Sockets::CTcpSocket::Write(const std::vector<Sockets::byte> &cBytes) noexcept
+bool Sockets::CTcpSocket::Write(const char *pcchBytes, size_t nCount) noexcept
 {
-}*/
+	if(m_iSocketFD == -1)
+	{
+		fprintf(stderr, "The given socket doesn't exist or it's not opened\n");
+		return false;
+	}
+
+	size_t nBytesToSend = nCount;
+	while(nBytesToSend != 0)
+	{
+		ssize_t nSentBytes = 
+			send(m_iSocketFD, pcchBytes + (nCount - nBytesToSend), nBytesToSend, 0);
+		if(nSentBytes == -1)
+		{
+			fprintf(stderr, "Failed to send data\n");
+			return false;
+		} else if(nSentBytes == 0)
+		{
+			fprintf(stderr, "The connection was closed\n");
+			return false;
+		} else 
+		{
+			nBytesToSend -= (size_t)nSentBytes;
+		}
+	}
+	return true;
+}
