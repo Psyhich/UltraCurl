@@ -3,6 +3,11 @@
 
 #include "uri.h"
 
+URI::URI(const std::string& cStringToSet) : m_originalString{cStringToSet}
+{
+
+}
+
 std::optional<std::string> URI::GetProtocol() const noexcept
 {
 	size_t nProtocolLength = 0;
@@ -23,6 +28,15 @@ std::optional<std::string> URI::GetProtocol() const noexcept
 		return std::nullopt;
 	} else 
 	{
+
+
+		for(size_t nIndex = 0; nIndex < nProtocolLength; nIndex++)
+		{
+			if(!CanBeUsedInProtocol(m_originalString[nIndex]))
+			{
+				return std::nullopt;
+			}
+		}
 		return m_originalString.substr(0, nProtocolLength);
 	}
 }
@@ -51,7 +65,7 @@ std::optional<std::string> URI::GetPureAddress() const noexcept
 			cchCurrentChar == '?' || cchCurrentChar == ':' ||
 			cchCurrentChar == '\0')
 		{
-			nAddressEnd = nIndex - 1;
+			nAddressEnd = nIndex;
 			break;
 		}
 	}
@@ -82,11 +96,13 @@ std::optional<int> URI::GetPort() const noexcept
 		{
 			nPortStartPos = nIndex + 1;
 			break;
-		} else if(cchCurrentChar == ':')
-		{
-			nPortStartPos = nIndex + 1;
-			break;
-		}
+		}	
+	}
+
+	// If we didn't find port, assuming it's 80
+	if(nPortStartPos == 0)
+	{
+		return 80;
 	}
 
 	// Now looking for port end
@@ -96,11 +112,11 @@ std::optional<int> URI::GetPort() const noexcept
 		if(cchCurrentChar == '/' || cchCurrentChar == '#' ||
 			cchCurrentChar == '?' || cchCurrentChar == '\0')
 		{
-			nPortEndPos = nIndex - 1;
+			nPortEndPos = nIndex;
 			break;
 		}
 	}
-	if(nPortEndPos != nPortStartPos)
+	if(nPortEndPos == nPortStartPos)
 	{
 		return std::nullopt;
 	}
@@ -108,6 +124,10 @@ std::optional<int> URI::GetPort() const noexcept
 	
 	try {
 		const int ciParsedNumber = std::stoi(cStringPort.c_str());
+		if(ciParsedNumber > 65535) // This is larges port number
+		{
+			return std::nullopt;
+		}
 		return ciParsedNumber;
 	} catch(std::invalid_argument &err)
 	{
