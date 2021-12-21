@@ -134,7 +134,7 @@ std::optional<std::vector<char>> Sockets::CTcpSocket::ReadTillEnd() noexcept
 	memset(chBuffer, 0, sizeof(char) * BUFFER_SIZE);
 
 	std::vector<char> messageVector;
-	messageVector.reserve(BUFFER_SIZE * 4);
+	messageVector.reserve(BUFFER_SIZE);
 
 	// If we recive same count as BUFFER_SIZE, we can request new block of data
 	ssize_t nRecivedBytes;
@@ -145,7 +145,8 @@ std::optional<std::vector<char>> Sockets::CTcpSocket::ReadTillEnd() noexcept
 		{
 			fprintf(stderr, "Error while reciving data\n");
 			return std::nullopt;
-		} else if(nRecivedBytes == 0)
+		}
+		else if(nRecivedBytes == 0)
 		{
 			// FIXME: rarely block of recived data can be equeal 
 			// To BUFFER_SIZE and it will roll into such error

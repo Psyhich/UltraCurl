@@ -26,7 +26,8 @@ std::optional<std::string> CURI::GetProtocol() const noexcept
 	if(nProtocolLength == 0)
 	{
 		return std::nullopt;
-	} else 
+	}
+	else 
 	{
 
 
@@ -129,7 +130,9 @@ std::optional<int> CURI::GetPort() const noexcept
 			return std::nullopt;
 		}
 		return ciParsedNumber;
-	} catch(std::invalid_argument &err)
+	// std::stoi can throw invalid_argument or out_of_range, 
+	// So catching any exception
+	} catch(const std::exception &err)
 	{
 		return std::nullopt;
 	}

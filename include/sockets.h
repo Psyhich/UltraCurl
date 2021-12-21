@@ -17,12 +17,12 @@ namespace Sockets
 	class CSocket 
 	{
 	public:
-		CSocket(const std::string& addressToUse);
+		CSocket(const std::string& csAddressToUse);
 		virtual std::optional<std::vector<char>> ReadTillEnd() noexcept = 0;
 		virtual bool Write(const char* pcchBytes, size_t nCount)  noexcept = 0;
 		virtual ~CSocket() {}
 	protected:
-		inline const CURI& GetAddress() { return m_address; }
+		inline const CURI& GetAddress() const noexcept { return m_address; }
 	private:
 		CURI m_address;
 	};
@@ -30,7 +30,7 @@ namespace Sockets
 	class CTcpSocket : public CSocket
 	{
 	public:
-		explicit CTcpSocket(const std::string& addressToUse);
+		explicit CTcpSocket(const std::string& csAddressToUse);
 		~CTcpSocket() override;
 		
 		std::optional<std::vector<char>> ReadTillEnd() noexcept override;
