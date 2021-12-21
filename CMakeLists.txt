@@ -11,17 +11,6 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 			${CMAKE_SOURCE_DIR}/compile_commands.json
 	)
 endif()
-# Function to check if module exists, it sets bool value to HAS_MODULE_<moudle name>
-function(CheckHasModule Module)
-  find_package(${Module} QUIET)
-  if(NOT DEFINED ${Module}_DIR)
-    set(HAS_MODULE_${Module} TRUE PARENT_SCOPE)
-  elseif(${Module}_DIR)
-    set(HAS_MODULE_${Module} TRUE PARENT_SCOPE)
-  else()
-    set(HAS_MODULE_${Module} FALSE PARENT_SCOPE)
-  endif()
-endfunction()
 
 # GoogleTest requires at least C++11
 set(CMAKE_CXX_STANDARD 17)
@@ -29,11 +18,10 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(SOURCES 
-	#include/http_downloader.h src/http_downloader.cpp
-	"include/sockets.h" "src/sockets.cpp" 
-	"include/uri.h" "src/uri.cpp"
-	)
-MESSAGE(${SOURCES})
+	include/http_downloader.h src/http_downloader.cpp
+	include/sockets.h src/sockets.cpp 
+	include/uri.h src/uri.cpp
+)
 set(MAIN src/main.cpp)
 set(TESTS tests/uri_tests.cpp)
 
@@ -51,20 +39,8 @@ endif()
 
 find_package(Threads REQUIRED)
 
-CheckHasModule(GTest)
-
-if(NOT ${HAS_MODULE_GTest})
-	# If GoogleTest not found, downloading it
-	include(FetchContent)
-	FetchContent_Declare(
-	  GoogleTest
-	  URL https://github.com/google/googletest/archive/609281088cfefc76f9d0ce82e1ff6c30cc3591e5.zip
-	)
-	# For Windows: Prevent overriding the parent project's compiler/linker settings
-	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-	FetchContent_MakeAvailable(GoogleTest)
-endif()
-
+# Adding GoogleTest from lib directory 
+add_subdirectory(lib/googletest)
 enable_testing()
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
