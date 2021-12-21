@@ -4,9 +4,9 @@
 #include <string>
 #include <optional>
 
-class URI {
+class CURI {
 public:
-	URI(const std::string& cStringToSet);
+	CURI(const std::string& cStringToSet);
 
 	inline std::string GetFullURI() const noexcept 
 	{
@@ -26,7 +26,6 @@ private:
 	}
 private:
 	std::string m_originalString;
-
 };
 
 #endif // MY_URI_H

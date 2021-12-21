@@ -16,7 +16,7 @@ Sockets::CSocket::CSocket::CSocket(const std::string &addressToUse) :
 }
 
 std::optional<uint16_t> Sockets::CTcpSocket::ExtractPortInByteOrder(
-	const URI &cURI) noexcept
+	const CURI &cURI) noexcept
 {
 	if(const auto cPort = cURI.GetPort())
 	{
@@ -26,7 +26,7 @@ std::optional<uint16_t> Sockets::CTcpSocket::ExtractPortInByteOrder(
 }
 
 std::optional<sockaddr> Sockets::CTcpSocket::GetSocketAddress(
-	const URI &cURI) noexcept
+	const CURI &cURI) noexcept
 {
 	if(const auto cAddress = cURI.GetPureAddress())
 	{

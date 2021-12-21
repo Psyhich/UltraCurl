@@ -3,12 +3,12 @@
 
 #include "uri.h"
 
-URI::URI(const std::string& cStringToSet) : m_originalString{cStringToSet}
+CURI::CURI(const std::string& cStringToSet) : m_originalString{cStringToSet}
 {
 
 }
 
-std::optional<std::string> URI::GetProtocol() const noexcept
+std::optional<std::string> CURI::GetProtocol() const noexcept
 {
 	size_t nProtocolLength = 0;
 	// Looking for :// pattern
@@ -41,7 +41,7 @@ std::optional<std::string> URI::GetProtocol() const noexcept
 	}
 }
 
-std::optional<std::string> URI::GetPureAddress() const noexcept
+std::optional<std::string> CURI::GetPureAddress() const noexcept
 {
 	// We should take in mind protocol and port, ideally address can end with / ? #
 	size_t nAddressStart = 0;
@@ -78,7 +78,7 @@ std::optional<std::string> URI::GetPureAddress() const noexcept
 	return m_originalString.substr(nAddressStart, nAddressEnd - nAddressStart);
 }
 
-std::optional<int> URI::GetPort() const noexcept
+std::optional<int> CURI::GetPort() const noexcept
 {
 	// Port specified between ':' and '#' '?' '/' chars
 	// Also we should omit protocol specifier ://
@@ -136,7 +136,7 @@ std::optional<int> URI::GetPort() const noexcept
 }
 
 
-std::optional<std::string> URI::GetPath() const noexcept
+std::optional<std::string> CURI::GetPath() const noexcept
 {
 	size_t nPathStart = 0;
 	for(size_t nIndex = 0; nIndex < m_originalString.size(); nIndex++)

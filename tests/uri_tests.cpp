@@ -7,7 +7,7 @@
 TEST(URIParsingTest, AddressParsingTest)
 {
 	std::string address = "blob://some.random.address.com:8999/path/to/file.txt?q=Text#sample";
-	URI addressURI(address);
+	CURI addressURI(address);
 
 	ASSERT_STREQ(addressURI.GetPureAddress()->c_str(), "some.random.address.com");
 
@@ -25,7 +25,7 @@ TEST(URIParsingTest, AddressParsingTest)
 TEST(URIParsingTest, PortParssingTest)
 {
 	std::string address = "some_proto://site.com:899?q=Cool+films";
-	URI addressURI(address);
+	CURI addressURI(address);
 
 	ASSERT_EQ(*addressURI.GetPort(), 899);
 
@@ -68,7 +68,7 @@ TEST(URIParsingTest, PortParssingTest)
 TEST(URIParsingTest, ProtocolParrsingTest)
 {
 	std::string address = "some-proto://site.com:899?q=Cool+films";
-	URI addressURI(address);
+	CURI addressURI(address);
 
 	ASSERT_STREQ(addressURI.GetProtocol()->c_str(), "some-proto");
 	
@@ -101,7 +101,7 @@ TEST(URIParsingTest, ProtocolParrsingTest)
 TEST(URIParsingTest, PathParsingTest)
 {
 	std::string address = "some-proto://site.com:899/some/random/path/page.html?q=Cool+films";
-	URI addressURI(address);
+	CURI addressURI(address);
 
 	ASSERT_STREQ(addressURI.GetPath()->c_str(), "/some/random/path/page.html");
 
