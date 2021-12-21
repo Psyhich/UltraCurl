@@ -134,3 +134,53 @@ std::optional<int> URI::GetPort() const noexcept
 		return std::nullopt;
 	}
 }
+
+
+std::optional<std::string> URI::GetPath() const noexcept
+{
+	size_t nPathStart = 0;
+	for(size_t nIndex = 0; nIndex < m_originalString.size(); nIndex++)
+	{
+		// We should take in mind that after protocol we also have ://
+		const char& cchCurrentChar = m_originalString[nIndex];
+		if(cchCurrentChar == '/')
+		{
+			nPathStart = nIndex;
+			break;
+		} else if(nIndex < m_originalString.size() - 3 && 
+			cchCurrentChar == ':' && 
+			m_originalString[nIndex + 1] == '/' &&
+			m_originalString[nIndex + 2] == '/')
+		{
+			// Skipping :// part
+			// Will skip :/ and in the end of cycle we will skip last /
+			nIndex += 2; 
+		}
+	}
+
+	// Path cannot begin in 0 index because it should start with '/'
+	if(nPathStart == 0)
+	{
+		return std::nullopt;
+	}
+
+	// Looking for path end(\0 ? #)
+	size_t nPathEnd = 0;
+	for(size_t nIndex = nPathStart; nIndex < m_originalString.size() + 1; nIndex++)
+	{
+		const char& cchCurrentChar = m_originalString.c_str()[nIndex];
+		if(cchCurrentChar == '#' || cchCurrentChar == '?' || cchCurrentChar == '\0')
+		{
+			nPathEnd = nIndex;
+			break;
+		}
+	}
+	// taking in mind zero path(proto://some.page.com/)
+	if(nPathEnd - nPathStart <= 1)
+	{
+		return std::nullopt;
+	}
+
+	return m_originalString.substr(nPathStart, nPathEnd - nPathStart);
+}
+

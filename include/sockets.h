@@ -36,19 +36,19 @@ namespace Sockets
 		std::optional<std::vector<char>> ReadTillEnd() noexcept override;
 		bool Write(const char* pcchBytes, size_t nCount) noexcept override;
 
-		CTcpSocket(const CTcpSocket &cSockeToCopy) = delete;
-		CTcpSocket operator=(const CTcpSocket &cSockeToCopy) = delete;
+		CTcpSocket(const CTcpSocket &cSocketToCopy) = delete;
+		CTcpSocket operator=(const CTcpSocket &cSocketToCopy) = delete;
 
 		CTcpSocket(CTcpSocket &&socketToMove);
-		CTcpSocket operator =(CTcpSocket &&socketToMove);
+		CTcpSocket& operator =(CTcpSocket &&socketToMove);
 	private:
-		// Return port in network byte order
+		// Returns port in network byte order
 		static std::optional<uint16_t> ExtractPortInByteOrder(const URI &cURIString) noexcept;
 		static std::optional<sockaddr> GetSocketAddress(const URI &cURIString) noexcept;
 		static const constexpr char *HTTP_SERVICE = "80";
 		static const constexpr size_t BUFFER_SIZE = 4096;
 	private:
-		int m_iSocketFD{0};
+		int m_iSocketFD{-1};
 
 	};
 

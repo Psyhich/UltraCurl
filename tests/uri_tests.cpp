@@ -97,3 +97,36 @@ TEST(URIParsingTest, ProtocolParrsingTest)
 
 	ASSERT_EQ(addressURI.GetProtocol(), std::nullopt);
 }
+
+TEST(URIParsingTest, PathParsingTest)
+{
+	std::string address = "some-proto://site.com:899/some/random/path/page.html?q=Cool+films";
+	URI addressURI(address);
+
+	ASSERT_STREQ(addressURI.GetPath()->c_str(), "/some/random/path/page.html");
+
+	address = "site.com:899/some/more/random/path/page.html#films";
+	addressURI = address;
+
+	ASSERT_STREQ(addressURI.GetPath()->c_str(), "/some/more/random/path/page.html");
+
+	address = "site.com/some/path/page.html";
+	addressURI = address;
+
+	ASSERT_STREQ(addressURI.GetPath()->c_str(), "/some/path/page.html");
+
+	address = "site.com/";
+	addressURI = address;
+
+	ASSERT_EQ(addressURI.GetPath(), std::nullopt);
+
+	address = "some-proto://site.com/?q=Cute+kitties";
+	addressURI = address;
+
+	ASSERT_EQ(addressURI.GetPath(), std::nullopt);
+
+	address = "some-proto://site.com#cool_div";
+	addressURI = address;
+
+	ASSERT_EQ(addressURI.GetPath(), std::nullopt);
+}

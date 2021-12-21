@@ -2,6 +2,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include <cstring>
@@ -80,7 +81,9 @@ Sockets::CTcpSocket::CTcpSocket(
 	}
 
 	// Setting specified port for resolved address
-	((sockaddr_in&)*cResolvedAddress).sin_port = *uiPort;
+	sockaddr_in &address = ((sockaddr_in&)*cResolvedAddress);
+	address.sin_family = AF_INET;
+	address.sin_port = *uiPort;
 
 	if(connect(m_iSocketFD, &*cResolvedAddress, sizeof(*cResolvedAddress)) == -1)
 	{
@@ -97,6 +100,26 @@ Sockets::CTcpSocket::~CTcpSocket()
 	{
 		close(m_iSocketFD);
 	}
+}
+
+Sockets::CTcpSocket::CTcpSocket(CTcpSocket &&socketToMove) : 
+	CSocket(socketToMove.GetAddress().GetFullURI())
+{
+	this->m_iSocketFD = socketToMove.m_iSocketFD;
+	socketToMove.m_iSocketFD = -1;
+}
+
+Sockets::CTcpSocket& Sockets::CTcpSocket::CTcpSocket::operator =(CTcpSocket &&socketToMove)
+{
+	if(this == &socketToMove)
+	{
+		return *this;
+	}
+
+	this->m_iSocketFD = socketToMove.m_iSocketFD;
+	socketToMove.m_iSocketFD = -1;
+
+	return *this;
 }
 
 std::optional<std::vector<char>> Sockets::CTcpSocket::ReadTillEnd() noexcept
