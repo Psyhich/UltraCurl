@@ -139,7 +139,7 @@ std::optional<int> CURI::GetPort() const noexcept
 }
 
 
-std::optional<std::string> CURI::GetPath() const noexcept
+std::optional<std::filesystem::path> CURI::GetPath() const noexcept
 {
 	size_t nPathStart = 0;
 	for(size_t nIndex = 0; nIndex < m_originalString.size(); nIndex++)
@@ -184,6 +184,7 @@ std::optional<std::string> CURI::GetPath() const noexcept
 		return std::nullopt;
 	}
 
-	return m_originalString.substr(nPathStart, nPathEnd - nPathStart);
+	return 
+		std::filesystem::path(m_originalString.substr(nPathStart, nPathEnd - nPathStart));
 }
 

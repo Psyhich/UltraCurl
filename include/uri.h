@@ -2,6 +2,7 @@
 #define MY_URI_H
 
 #include <string>
+#include <filesystem>
 #include <optional>
 
 class CURI {
@@ -14,7 +15,7 @@ public:
 	}
 	std::optional<std::string> GetProtocol() const noexcept;
 	std::optional<std::string> GetPureAddress() const noexcept;
-	std::optional<std::string> GetPath() const noexcept;
+	std::optional<std::filesystem::path> GetPath() const noexcept;
 	std::optional<int> GetPort() const noexcept;
 private:
 	static inline bool CanBeUsedInProtocol(char chCharToCheck) noexcept

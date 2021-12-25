@@ -7,6 +7,7 @@
 
 #include <cstring>
 #include <stdio.h>
+#include <vector>
 
 #include "sockets.h"
 
@@ -15,20 +16,18 @@ Sockets::CSocket::CSocket::CSocket(const std::string &addressToUse) :
 {
 }
 
-std::optional<uint16_t> Sockets::CTcpSocket::ExtractPortInByteOrder(
-	const CURI &cURI) noexcept
+std::optional<uint16_t> Sockets::CTcpSocket::ExtractPortInByteOrder() const noexcept
 {
-	if(const auto cPort = cURI.GetPort())
+	if(const auto cPort = GetAddress().GetPort())
 	{
 		return htons(*cPort);
 	}
 	return htons(80);
 }
 
-std::optional<sockaddr> Sockets::CTcpSocket::GetSocketAddress(
-	const CURI &cURI) noexcept
+std::optional<sockaddr> Sockets::CTcpSocket::GetSocketAddress() const noexcept
 {
-	if(const auto cAddress = cURI.GetPureAddress())
+	if(const auto cAddress = GetAddress().GetPureAddress())
 	{
 		// Setting hint to look for host(protocol, socket type and IPv4)
 		addrinfo addressHint;
@@ -57,14 +56,14 @@ Sockets::CTcpSocket::CTcpSocket(
 	const std::string& addressToUse) : CSocket(addressToUse)
 {
 	// Getting address info to know which IP protocol to use
-	std::optional<sockaddr> cResolvedAddress = GetSocketAddress(GetAddress());
+	std::optional<sockaddr> cResolvedAddress = GetSocketAddress();
 	if(!cResolvedAddress)
 	{
 		fprintf(stderr, "Failed to resolve given address\n");
 		return;
 	}
 
-	std::optional<uint16_t> uiPort = GetAddress().GetPort();
+	std::optional<uint16_t> uiPort = ExtractPortInByteOrder();
 	// If we got wrongly written port returning nullopt
 	if(!uiPort)
 	{
@@ -82,10 +81,9 @@ Sockets::CTcpSocket::CTcpSocket(
 
 	// Setting specified port for resolved address
 	sockaddr_in &address = ((sockaddr_in&)*cResolvedAddress);
-	address.sin_family = AF_INET;
 	address.sin_port = *uiPort;
 
-	if(connect(m_iSocketFD, &*cResolvedAddress, sizeof(*cResolvedAddress)) == -1)
+	if(connect(m_iSocketFD, (&*cResolvedAddress), sizeof(sockaddr)) == -1)
 	{
 		fprintf(stderr, "Failed to connect to given address\n");
 		close(m_iSocketFD);
@@ -124,7 +122,7 @@ Sockets::CTcpSocket& Sockets::CTcpSocket::CTcpSocket::operator =(CTcpSocket &&so
 
 std::optional<std::vector<char>> Sockets::CTcpSocket::ReadTillEnd() noexcept
 {
-	if(m_iSocketFD == -1)
+	if(m_iSocketFD < 0)
 	{
 		fprintf(stderr, "The given socket doesn't exist or it's not opened\n");
 		return std::nullopt;
@@ -146,21 +144,92 @@ std::optional<std::vector<char>> Sockets::CTcpSocket::ReadTillEnd() noexcept
 			fprintf(stderr, "Error while reciving data\n");
 			return std::nullopt;
 		}
-		else if(nRecivedBytes == 0)
-		{
-			// FIXME: rarely block of recived data can be equeal 
-			// To BUFFER_SIZE and it will roll into such error
-			fprintf(stderr, "Closed before reciving all\n");
-		}
+
 		for(ssize_t nCount = 0; nCount < nRecivedBytes; nCount++)
 		{
 			messageVector.push_back(chBuffer[nCount]);
 		}
 
-	} while(nRecivedBytes == BUFFER_SIZE);
+	} while(nRecivedBytes != 0);
 
 	messageVector.shrink_to_fit();
 	return messageVector;
+}
+
+
+std::optional<std::vector<char>> Sockets::CTcpSocket::ReadTill(const std::string &csStringToReadTill) noexcept
+{
+	if(m_iSocketFD < 0)
+	{
+		fprintf(stderr, "The given socket doesn't exist or it's not opened\n");
+		return std::nullopt;
+	}
+	if(csStringToReadTill.size() < 1)
+	{
+		return std::nullopt;
+	}
+	size_t nCurrentStringIndex = 0;
+	
+	std::vector<char> readData;
+
+	char chReadChar;
+	// TODO: rewrite this socket as adapter with internal buffer
+	while(recv(m_iSocketFD, &chReadChar, 1, 0) > 0)
+	{
+		readData.push_back(chReadChar);
+		if(chReadChar == csStringToReadTill[nCurrentStringIndex])
+		{
+			++nCurrentStringIndex;
+			if(nCurrentStringIndex == csStringToReadTill.size())
+			{
+				return readData;
+			}
+		}
+		else 
+		{
+			nCurrentStringIndex = 0;
+		}
+	}
+	return std::nullopt;
+}
+
+std::optional<std::vector<char>> Sockets::CTcpSocket::ReadCount(size_t nCountToRead) noexcept
+{
+	if(m_iSocketFD < 0)
+	{
+		fprintf(stderr, "The given socket doesn't exist or it's not opened\n");
+		return std::nullopt;
+	}
+
+	if(nCountToRead == 0)
+	{
+		return std::nullopt;
+	}
+
+	std::vector<char> readData;
+	readData.resize(nCountToRead);
+
+	ssize_t nBytesRead = 0;
+	size_t nBytesLeft = nCountToRead;
+	while(nBytesLeft > 0)
+	{
+		const ssize_t nBytesRecived = 
+			recv(m_iSocketFD, readData.data() + nBytesRead, nBytesLeft, 0);
+		if(nBytesRecived < 0)
+		{
+			fprintf(stderr, "An error occured while reciving data\n");
+			return std::nullopt;
+		}
+		if(nBytesRecived == 0)
+		{
+			fprintf(stderr, "Connection was closed by host");
+			return std::nullopt;
+		}
+		nBytesRead += nBytesRecived;
+		nBytesLeft = nBytesLeft - nBytesRecived;
+	}
+
+	return readData;
 }
 
 bool Sockets::CTcpSocket::Write(const char *pcchBytes, size_t nCount) noexcept

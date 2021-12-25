@@ -21,8 +21,12 @@ set(SOURCES
 	include/http_downloader.h src/http_downloader.cpp
 	include/sockets.h src/sockets.cpp 
 	include/uri.h src/uri.cpp
+	include/response.h src/response.cpp
 )
-set(MAIN src/main.cpp)
+set(CLI_BUILD 
+	src/main.cpp
+	include/cli_helper.h src/cli_helper.cpp
+)
 set(TESTS tests/uri_tests.cpp)
 
 # Setting flags for coverage test
@@ -46,8 +50,8 @@ enable_testing()
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC include/)
 
-add_executable(main ${MAIN})
-target_link_libraries(main ${PROJECT_NAME})
+add_executable(ultra_curlcli ${CLI_BUILD})
+target_link_libraries(ultra_curlcli ${PROJECT_NAME})
 
 
 add_executable(tests ${TESTS})
@@ -70,7 +74,7 @@ include(GoogleTest)
 gtest_discover_tests(tests)
 
 # Automaticaly running all tests on build
-add_custom_command(TARGET main
+add_custom_command(TARGET ultra_curlcli
 					POST_BUILD
 					COMMAND ctest -C $<CONFIGURATION> 
 						--output-on-failure
