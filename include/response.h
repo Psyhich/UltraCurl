@@ -8,6 +8,8 @@
 namespace HTTP 
 {
 	using Headers = std::map<std::string, std::string>;
+	/// Special parser class for easier 
+	/// work with server responses
 	class CHTTPResponse {
 	public:
 		inline bool IsSuccess() const noexcept

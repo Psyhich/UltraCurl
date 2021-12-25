@@ -11,9 +11,8 @@
 
 namespace Sockets
 {
-	/* 
-	* Representation of simple blocking socket that can send and recive data
-	*/
+	/// Representation of simple blocking socket 
+	/// that can send and recive data
 	class CSocket 
 	{
 	public:
@@ -43,27 +42,22 @@ namespace Sockets
 		CTcpSocket(CTcpSocket &&socketToMove);
 		CTcpSocket& operator =(CTcpSocket &&socketToMove);
 		// IO operations
-		/*
-		* Reads till some specified string including that string
-		* If string is not found, returning nullopt
-		* */
+
+		/// Reads till some specified string including that string
+		/// If string is not found, returning nullopt
 		std::optional<std::vector<char>> ReadTill(const std::string &csStringToReadTill) noexcept override;
-		/*
-		* Reads some count of chars from socket
-		* */
+
+		/// Reads some count of chars from socket
 		std::optional<std::vector<char>> ReadCount(size_t nCountToRead) noexcept override;
-		/*
-		* Reads data till the socket is 
-		* not closed or there is nothing to get
-		* */
+
+		/// Reads data till the socket is 
+		/// not closed or there is nothing to get
 		std::optional<std::vector<char>> ReadTillEnd() noexcept override;
 
-		/*
-		* Writes all data to socket
-		* */
+		/// Writes all data to socket
 		bool Write(const char* pcchBytes, size_t nCount) noexcept override;
 	private:
-		// Returns port in network byte order
+		/// Returns port in network byte order
 		std::optional<uint16_t> ExtractPortInByteOrder() const noexcept;
 		std::optional<sockaddr> GetSocketAddress() const noexcept;
 
