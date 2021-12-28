@@ -7,6 +7,7 @@ pipeline {
 		stage('SCM') {
 			steps { 
 				checkout scm
+				sh 'git submodule update --init --recursive'
 			}
 		}
 		
