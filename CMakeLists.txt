@@ -27,7 +27,11 @@ set(CLI_BUILD
 	src/main.cpp
 	include/cli_helper.h src/cli_helper.cpp
 )
-set(TESTS tests/uri_tests.cpp)
+set(TESTS 
+	tests/uri_tests.cpp
+	tests/cli_helper_tests.cpp
+	include/cli_helper.h src/cli_helper.cpp
+)
 
 # Setting flags for coverage test
 set(CMAKE_CXX_FLAGS_DEBUG " -g -O0 -fprofile-arcs -ftest-coverage ${CMAKE_C_FLAGS_DEBUG}")
@@ -64,8 +68,7 @@ target_link_libraries( tests
 )
 if(CMAKE_COMPILER_IS_GNUCXX)
 	include(CodeCoverage)
-	# Currenty I cannot make parameters more universal, so I have to use python regexp
-	SETUP_TARGET_FOR_COVERAGE_COBERTURA(tests_coverage tests cobertura "\".*/(tests.cpp|main.cpp)\"")
+	SETUP_TARGET_FOR_COVERAGE_COBERTURA(tests_coverage tests cobertura "\"(.*lib.*|.*tests.*)\"")
 endif()
 
 

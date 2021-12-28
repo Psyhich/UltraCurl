@@ -13,7 +13,7 @@ namespace CLI {
 	class CCLIHelper
 	{
 	public:
-		CCLIHelper(int iArgc, char *const cszArgv[]);
+		CCLIHelper(int iArgc, const char *const cszArgv[]);
 
 		bool CheckIfParameterExist(const std::string& csParameterToCheck) const noexcept;
 		std::optional<std::string> GetParameterValue(const std::string &csParameterToGet) const noexcept;
