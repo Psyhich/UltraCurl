@@ -108,16 +108,21 @@ namespace Downloaders
 			{
 				// Parsing bytes count value
 				size_t nBytesCount = 0;
+				size_t nNumberEndPosition;
 				try
 				{
-					nBytesCount = std::stoull(cContentLengthHeader->second);
+					nBytesCount = std::stoull(cContentLengthHeader->second, &nNumberEndPosition);
 				}
 				catch(const std::exception &err)
 				{
 					fprintf(stderr, "Failed to determine length of content\n");
 					return std::nullopt;
 				}
-				possiblyReadData = pSocket->ReadCount(nBytesCount);
+				// Checking if headers is invalid
+				if(nNumberEndPosition == cContentLengthHeader->second.size())
+				{
+					possiblyReadData = pSocket->ReadCount(nBytesCount);
+				}
 				bIsReadData = true;
 			}
 			else
