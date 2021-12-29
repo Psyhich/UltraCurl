@@ -39,7 +39,6 @@ namespace Downloaders
 				return std::nullopt;
 			}
 			headers.insert({std::string("Accept"), std::string("*/*")});
-			//headers.insert({std::string("Connection"), std::string("close")});
 			headers.insert({std::string("Accept-Encoding"), std::string("identity")});
 			// TODO: think about adding encoding support with gzip and other libraries
 			
@@ -111,7 +110,7 @@ namespace Downloaders
 				size_t nBytesCount = 0;
 				try
 				{
-					nBytesCount = std::stoi(cContentLengthHeader->second);
+					nBytesCount = std::stoull(cContentLengthHeader->second);
 				}
 				catch(const std::exception &err)
 				{

@@ -31,7 +31,8 @@ set(TESTS
 	tests/uri_tests.cpp
 	tests/cli_helper_tests.cpp
 	tests/response_tests.cpp
-	include/cli_helper.h src/cli_helper.cpp
+	tests/downloader_tests.cpp
+	include/cli_helper.h src/cli_helper.cpp # adding files which need to be tested
 )
 
 # Setting flags for coverage test
@@ -69,7 +70,7 @@ target_link_libraries( tests
 )
 if(CMAKE_COMPILER_IS_GNUCXX)
 	include(CodeCoverage)
-	SETUP_TARGET_FOR_COVERAGE_COBERTURA(tests_coverage tests cobertura "\"(.*lib.*|.*tests.*)\"")
+	SETUP_TARGET_FOR_COVERAGE_COBERTURA(tests_coverage tests cobertura "\"(.*lib.*|.*tests.*|.*main.cpp)\"")
 endif()
 
 

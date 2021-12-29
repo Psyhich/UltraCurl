@@ -127,11 +127,6 @@ void WriteIntoFiles(std::istream *const pInputStream, std::ostream *const pOutpu
 				if(path && path->has_filename())
 				{
 					sFileName = path->filename();
-					if(path->has_extension())
-					{
-						sFileName += '.';
-						sFileName += path->extension();
-					}
 				}
 				else
 				{
