@@ -219,7 +219,7 @@ TEST(HTTPDownloaderTests, BaseLengthSpecifiedTest)
 	} params;
 
 	Downloaders::CHTTPDownloader<TestSocket<LengthSpecificParams>> downloader;
-	const auto cGotData = downloader.Download("http://www.my.site.com/some/file.html");
+	const auto cGotData = downloader.Download(CURI("http://www.my.site.com/some/file.html"));
 	
 	HTTP::CHTTPResponse cRealResponse;
 	cRealResponse.LoadAll(std::vector<char>{params.sDataToUse.begin(), params.sDataToUse.end()});
@@ -247,7 +247,7 @@ TEST(HTTPDownloaderTests, ChunkedSpecifiedTest)
 	} params;
 
 	Downloaders::CHTTPDownloader<TestSocket<ChunkedParameters>> downloader;
-	const auto cGotData = downloader.Download("some-proto://ebay-bebay.com");
+	const auto cGotData = downloader.Download(CURI("some-proto://ebay-bebay.com"));
 	
 	HTTP::CHTTPResponse cRealResponse;
 	cRealResponse.LoadHeaders(std::vector<char>{params.sDataToUse.begin(), params.sDataToUse.end()});
@@ -285,7 +285,7 @@ TEST(HTTPDownloaderTests, NoSizeSpecifiedTest)
 	} params;
 
 	Downloaders::CHTTPDownloader<TestSocket<NoSizeParameters>> downloader;
-	const auto cGotData = downloader.Download("some-proto://ebay-bebay.com?q=cool+films");
+	const auto cGotData = downloader.Download(CURI("some-proto://ebay-bebay.com?q=cool+films"));
 	
 	HTTP::CHTTPResponse cRealResponse;
 	cRealResponse.LoadHeaders(std::vector<char>{params.sDataToUse.begin(), params.sDataToUse.end()});
@@ -317,13 +317,13 @@ TEST(HTTPDownloaderTests, FailWrongAddressTests)
 
 	Downloaders::CHTTPDownloader<TestSocket<SimpleParams>> downloader;
 
-	auto gotData = downloader.Download("some-proto:/ebay-bebay.com");
+	auto gotData = downloader.Download(CURI("some-proto:/ebay-bebay.com"));
 	ASSERT_FALSE(gotData);
 
-	gotData = downloader.Download(":ebay-bebay.com");
+	gotData = downloader.Download(CURI(":ebay-bebay.com"));
 	ASSERT_FALSE(gotData);
 
-	gotData = downloader.Download("/address/not/right.com/real/path");
+	gotData = downloader.Download(CURI("/address/not/right.com/real/path"));
 	ASSERT_FALSE(gotData);
 }
 
@@ -343,7 +343,7 @@ TEST(HTTPDownloaderTests, FailChunkTests)
 	} firstParams;
 
 	Downloaders::CHTTPDownloader<TestSocket<NoEndChunkParams>> downloader;
-	auto gotData = downloader.Download("some-proto://ebay-bebay.com");
+	auto gotData = downloader.Download(CURI("some-proto://ebay-bebay.com"));
 	
 	HTTP::CHTTPResponse cRealResponse;
 	cRealResponse.LoadHeaders(
@@ -365,7 +365,7 @@ TEST(HTTPDownloaderTests, FailChunkTests)
 	} secondParams;
 
 	Downloaders::CHTTPDownloader<TestSocket<WrongLengthChunkParams>> secondDownloader;
-	gotData = secondDownloader.Download("some-proto://ebay-bebay.com");
+	gotData = secondDownloader.Download(CURI("some-proto://ebay-bebay.com"));
 	
 	cRealResponse.LoadHeaders(std::vector<char>{secondParams.sDataToUse.begin(), secondParams.sDataToUse.end()});
 
@@ -386,7 +386,7 @@ TEST(HTTPDownloaderTests, FailLengthTests)
 	};
 
 	Downloaders::CHTTPDownloader<TestSocket<WrongLengthSpecified>> downloader;
-	auto cGotData = downloader.Download("http://www.my.site.com/some/file.html");
+	auto cGotData = downloader.Download(CURI("http://www.my.site.com/some/file.html"));
 	ASSERT_FALSE(cGotData);
 
 	struct WrongFormatSpecified : public BaseParams{
@@ -401,6 +401,6 @@ TEST(HTTPDownloaderTests, FailLengthTests)
 	};
 
 	Downloaders::CHTTPDownloader<TestSocket<WrongFormatSpecified>> secondDownloader;
-	cGotData = secondDownloader.Download("http://www.my.site.com/some/file.html");
+	cGotData = secondDownloader.Download(CURI("http://www.my.site.com/some/file.html"));
 	ASSERT_FALSE(cGotData);
 }

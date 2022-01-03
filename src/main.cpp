@@ -110,8 +110,9 @@ void WriteIntoFiles(std::istream *const pInputStream, std::ostream *const pOutpu
 	while(getline(*pInputStream, sLine))
 	{
 		// Downloading data
+		const CURI pageURI = CURI(sLine);
 		HTTPTcpDownloader downloader;
-		if(auto cResponse = downloader.Download(sLine))
+		if(auto cResponse = downloader.Download(pageURI))
 		{
 			// If we piping our output, writing into pipe
 			if(pOutputStream != nullptr)
@@ -122,7 +123,6 @@ void WriteIntoFiles(std::istream *const pInputStream, std::ostream *const pOutpu
 			{
 				// Constructing file name from request path and content type
 				std::string sFileName;
-				const CURI pageURI = CURI(sLine);
 				const auto path = pageURI.GetPath();
 				if(path && path->has_filename())
 				{
