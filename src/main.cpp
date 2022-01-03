@@ -12,9 +12,9 @@
 #include "uri.h"
 
 constexpr const char* HELP_MESSAGE =
-"Usage:\n" \
-"%s <url> [options]\n"	\
-"-f, --file <filepath>	file to read links from(should be divided with newlines)\n" \
+"Usage:\n"
+"%s <url> [options]\n"
+"-f, --file <filepath>	file to read links from(should be divided with newlines)\n"
 "-h, --help, --usage	show help\n";
 
 using HTTPTcpDownloader = Downloaders::CHTTPDownloader<Sockets::CTcpSocket>;
@@ -24,7 +24,7 @@ void PrintUsage(const std::string &name);
 void WriteIntoFiles(std::istream *const pInputStream, std::ostream *const pOutputStream, 
 	const CLI::CCLIHelper &cParamaters) noexcept;
 
-bool GetStreams(std::istream **pInputStream, std::ostream **pOutputStream, 
+bool GetStreams(std::istream *&pInputStream, std::ostream *&pOutputStream, 
 	const CLI::CCLIHelper &cParameters) noexcept;
 
 int main(int iArgc, char *argv[]) {
@@ -33,7 +33,7 @@ int main(int iArgc, char *argv[]) {
 	std::istream *pInputStream = nullptr;
 	std::ostream *pOutputStream = nullptr;
 	
-	if(!GetStreams(&pInputStream, &pOutputStream, cParamaters))
+	if(!GetStreams(pInputStream, pOutputStream, cParamaters))
 	{
 		return -1;
 	}
@@ -51,7 +51,7 @@ int main(int iArgc, char *argv[]) {
 	}
 }
 
-bool GetStreams(std::istream **pInputStream, std::ostream **pOutputStream, 
+bool GetStreams(std::istream *&pInputStream, std::ostream *&pOutputStream, 
 	const CLI::CCLIHelper &cParameters) noexcept
 {
 	// Checking if input is being piped
@@ -67,7 +67,7 @@ bool GetStreams(std::istream **pInputStream, std::ostream **pOutputStream,
 		}
 		if(fileParameterValue)
 		{
-			*pInputStream = new std::ifstream(*fileParameterValue);
+			pInputStream = new std::ifstream(*fileParameterValue);
 			if(!pInputStream)
 			{
 				fprintf(stderr, "File: %s doesn't exist", fileParameterValue->c_str());
@@ -80,7 +80,7 @@ bool GetStreams(std::istream **pInputStream, std::ostream **pOutputStream,
 			// if we haven't found value trying to get specified url
 			if(const auto URIParamater = cParameters.GetParameterValue(""))
 			{
-				*pInputStream = new std::stringstream(URIParamater->data());
+				pInputStream = new std::stringstream(URIParamater->data());
 			}
 			else // If we don't get any URI returning
 			{
@@ -91,70 +91,78 @@ bool GetStreams(std::istream **pInputStream, std::ostream **pOutputStream,
 	}
 	else
 	{
-		*pInputStream = &std::cin;
+		pInputStream = &std::cin;
 	}
 
 	// Checking if output is being piped
-	if(isatty(fileno(stdout)) && pOutputStream == nullptr)
+	if(!isatty(fileno(stdout)))
 	{
-		*pOutputStream = &std::cout;
+		pOutputStream = &std::cout;
 	}
 	return true;
 }
 
-void WriteIntoFiles(std::istream *const pInputStream, std::ostream *const pOutputStream, 
+void WriteIntoFiles(std::istream *const pInputStream, std::ostream *pOutputStream, 
 	const CLI::CCLIHelper &cParamaters) noexcept
 {
 	// Now reading the stream and after each \n downloading the file from URI
 	std::string sLine; 
 	while(getline(*pInputStream, sLine))
 	{
-		// Downloading data
 		const CURI pageURI = CURI(sLine);
+		std::string sFileName;
+		// Checking for available stream
+		// If we don't pipe data, saving into files
+		// But checking if can overwrite constructed file names
+		if(pOutputStream == nullptr)
+		{
+			// Constructing file name from request path and content type
+			const auto path = pageURI.GetPath();
+			if(path && path->has_filename())
+			{
+				sFileName = path->filename();
+			}
+			else
+			{
+				if(auto sPageAddress = pageURI.GetPureAddress())
+				{
+					sFileName = std::move(*sPageAddress);
+				} 
+				else
+				{
+					fprintf(stderr, "Invalid URI: %s", sLine.c_str());
+					continue;
+				}
+			}
+			// Checking if we won't overwrite anything
+			const bool cbIsRewriteForced = 
+				cParamaters.CheckIfParameterExist("force");
+
+			std::ifstream fileToCheck{sFileName};
+			if(!fileToCheck || cbIsRewriteForced)
+			{
+				fileToCheck.close();
+				pOutputStream = new std::ofstream{sFileName};
+			}
+			else 
+			{
+				fileToCheck.close();
+				fprintf(stderr, "Cannot overwrite: %s\n", sFileName.c_str());
+				continue;
+			}
+		}
+		
+		// Downloading data
 		HTTPTcpDownloader downloader;
 		if(auto cResponse = downloader.Download(pageURI))
 		{
-			// If we piping our output, writing into pipe
-			if(pOutputStream != nullptr)
+			pOutputStream->write(cResponse->GetData().data(), cResponse->GetData().size());
+			if(pOutputStream != &std::cout)
 			{
-				*pOutputStream << cResponse->GetData().data();
-			} 
-			else 
-			{
-				// Constructing file name from request path and content type
-				std::string sFileName;
-				const auto path = pageURI.GetPath();
-				if(path && path->has_filename())
-				{
-					sFileName = path->filename();
-				}
-				else
-				{
-					// Can unwrap optional value because we know 
-					// That adress exists and we got response from it
-					sFileName = *pageURI.GetPureAddress();
-				}
-				// Checking if we won't overwrite anything
-				const bool cbIsRewriteForced = 
-					cParamaters.CheckIfParameterExist("force");
-
-				std::ifstream fileToCheck{sFileName};
-				if(!fileToCheck || cbIsRewriteForced)
-				{
-					fileToCheck.close();
-					std::ofstream fileToWrite{sFileName};
-					const std::vector<char> &cResponseData = cResponse->GetData();
-					fileToWrite.write(cResponseData.data(), cResponseData.size());
-					fileToWrite.close();
-					printf("Saved: %s\n", sFileName.c_str());
-				}
-				else 
-				{
-					fileToCheck.close();
-					fprintf(stderr, "Cannot overwrite: %s\n", sFileName.c_str());
-				}
+				printf("Saved: %s\n", sFileName.c_str());
+				delete pOutputStream;
+				pOutputStream = nullptr;
 			}
-			
 		}
 		else
 		{

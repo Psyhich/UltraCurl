@@ -60,8 +60,28 @@ namespace Downloaders
 			return response;
 		}
 
+		std::optional<size_t> GetBytesToRead() const noexcept
+		{
+			if(m_pSocket == nullptr)
+			{
+				return std::nullopt;
+			}
+
+			return m_pSocket->GetBytesToRead();
+		}
+
+		std::optional<size_t> GetReadBytes() const noexcept
+		{
+			if(m_pSocket == nullptr)
+			{
+				return std::nullopt;
+			}
+
+			return m_pSocket->GetReadBytes();
+		}
+
 	private:
-		std::optional<std::string> ConstructRequest(const CURI &cURI)
+		std::optional<std::string> ConstructRequest(const CURI &cURI) noexcept
 		{
 			std::map<std::string, std::string> headers;
 			// Adding needed headers for basic request
@@ -96,7 +116,7 @@ namespace Downloaders
 			return sRequest;
 		}
 
-		bool LoadResponseHeaders(HTTP::CHTTPResponse &response)
+		bool LoadResponseHeaders(HTTP::CHTTPResponse &response) noexcept
 		{
 			if(m_pSocket == nullptr)
 			{
@@ -119,7 +139,7 @@ namespace Downloaders
 			return true;
 		}
 
-		bool LoadResponseData(HTTP::CHTTPResponse &response)
+		bool LoadResponseData(HTTP::CHTTPResponse &response) noexcept
 		{
 			// To identify length of we have 5 ways
 			// 1. HEAD requests should not have body(we use GET)
@@ -143,10 +163,10 @@ namespace Downloaders
 			if(cTransferEncoding != cResponseHeaders.end() && 
 				cTransferEncoding->second == "chunked")
 			{
-				possiblyReadData = ReadByChunks(m_pSocket);
+				possiblyReadData = ReadByChunks();
 				bIsReadData = true;
 			}
-			// Checck for content length
+			// Check for content length
 			else if(cContentLengthHeader != cResponseHeaders.end())
 			{
 				// Parsing bytes count value
@@ -158,8 +178,6 @@ namespace Downloaders
 				}
 				catch(const std::exception &err)
 				{
-					delete m_pSocket;
-					m_pSocket = nullptr;
 					fprintf(stderr, "Failed to determine length of content\n");
 					return false;
 				}
@@ -188,21 +206,21 @@ namespace Downloaders
 			return true;
 		}
 		
-		void AddHeaders(const std::map<std::string, std::string> &cHeadersMap, std::string &requestString)
+		void AddHeaders(const std::map<std::string, std::string> &cHeadersMap, std::string &requestString) noexcept
 		{
 			for(const auto &[csKey, csValue] : cHeadersMap)
 			{
 				requestString += csKey + ": " + csValue + "\r\n";
 			}
 		}
-		std::optional<std::vector<char>> ReadByChunks(SocketClass *socket) noexcept
+		std::optional<std::vector<char>> ReadByChunks() noexcept
 		{
 			// If we have chunked encoding we should read till first CRLF and 
 			// Parse those hexadecimal as number of bytes
 			std::optional<size_t> nCountToRead;
 
 			std::vector<char> readChunks;
-			nCountToRead = ReadChunkSize(socket);
+			nCountToRead = ReadChunkSize();
 			while(nCountToRead)
 			{
 				if(*nCountToRead == 0)
@@ -212,7 +230,7 @@ namespace Downloaders
 
 				readChunks.reserve(readChunks.size() + *nCountToRead);
 				// Taking in mind last CRLF, it will be excluded, but needs to be read
-				if(const auto cReadData = socket->ReadCount(*nCountToRead + 2))
+				if(const auto cReadData = m_pSocket->ReadCount(*nCountToRead + 2))
 				{
 					for(size_t nIndex = 0; nIndex < cReadData->size() - 2; nIndex++)
 					{
@@ -223,15 +241,15 @@ namespace Downloaders
 				{
 					return std::nullopt;
 				}
-				nCountToRead = ReadChunkSize(socket);
+				nCountToRead = ReadChunkSize();
 			}
 			return std::nullopt;
 		}
 
-		std::optional<size_t> ReadChunkSize(SocketClass *socket) noexcept
+		std::optional<size_t> ReadChunkSize() noexcept
 		{
 			// Checking 
-			if(auto readHexadecimal = socket->ReadTill("\r\n"))
+			if(auto readHexadecimal = m_pSocket->ReadTill("\r\n"))
 			{
 
 				readHexadecimal->push_back('\0');

@@ -24,8 +24,23 @@ namespace Sockets
 
 		virtual bool Write(const char* pcchBytes, size_t nCount)  noexcept = 0;
 		virtual ~CSocket() {}
+
+		inline std::optional<size_t> GetBytesToRead() const noexcept 
+		{
+			return m_nBytesToRead;
+		}
+
+		inline std::optional<size_t> GetReadBytes() const noexcept 
+		{
+			return m_nReadBytes;
+		}
+
 	protected:
 		inline const CURI& GetAddress() const noexcept { return m_address; }
+		// Progress bytes are optional because not all 
+		// sockets can deduce how much data they would need to download
+		std::optional<size_t> m_nBytesToRead;
+		std::optional<size_t> m_nReadBytes;
 	private:
 		CURI m_address;
 	};
