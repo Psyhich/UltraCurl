@@ -45,14 +45,14 @@ pipeline {
 				}
 			}
 		}
-		stage("Publish to GitHub") {
-			steps{
-				dir("build"){
-					publishCoverage adapters: [coberturaAdapter('cobertura.xml')], sourceFileResolver: sourceFiles('NEVER_STORE')
-				}
-				step([$class: 'MasterCoverageAction', scmVars: [GIT_URL: env.GIT_URL]])
-				step([$class: 'CompareCoverageAction', publishResultAs: 'statusCheck', skipPublishingChecks: true, scmVars: [GIT_URL: env.GIT_URL]])
+	}
+	post {
+		always {
+			dir("build"){
+				publishCoverage adapters: [coberturaAdapter('cobertura.xml')], sourceFileResolver: sourceFiles('NEVER_STORE')
 			}
+			step([$class: 'MasterCoverageAction', scmVars: [GIT_URL: env.GIT_URL]])
+			step([$class: 'CompareCoverageAction', publishResultAs: 'statusCheck', skipPublishingChecks: true, scmVars: [GIT_URL: env.GIT_URL]])
 		}
 	}
 }
