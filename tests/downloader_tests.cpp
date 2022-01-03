@@ -300,6 +300,33 @@ TEST(HTTPDownloaderTests, NoSizeSpecifiedTest)
 	ASSERT_EQ(cGotData->GetData(), cRealData);
 }
 
+TEST(HTTPDownloaderTests, FailWrongAddressTests)
+{
+	struct SimpleParams : public BaseParams{
+		SimpleParams() : BaseParams(
+			"HTTP/1.1 200 OK\r\n"
+			"more-random-header: value\r\nsome-header: value_of_header\r\nContent-Length: 10\r\n\r\n"
+			"1234567890",
+			"1234567890",
+			"ebay-bebay.com",
+			"/"
+		)
+		{
+		}
+	} firstParams;
+
+	Downloaders::CHTTPDownloader<TestSocket<SimpleParams>> downloader;
+
+	auto gotData = downloader.Download("some-proto:/ebay-bebay.com");
+	ASSERT_FALSE(gotData);
+
+	gotData = downloader.Download(":ebay-bebay.com");
+	ASSERT_FALSE(gotData);
+
+	gotData = downloader.Download("/address/not/right.com/real/path");
+	ASSERT_FALSE(gotData);
+}
+
 TEST(HTTPDownloaderTests, FailChunkTests)
 {
 	struct NoEndChunkParams : public BaseParams{
@@ -342,10 +369,6 @@ TEST(HTTPDownloaderTests, FailChunkTests)
 	
 	cRealResponse.LoadHeaders(std::vector<char>{secondParams.sDataToUse.begin(), secondParams.sDataToUse.end()});
 
-	ASSERT_FALSE(gotData);
-
-	// Wrong URI check
-	gotData = secondDownloader.Download("some-proto:/ebay-bebay.com");
 	ASSERT_FALSE(gotData);
 }
 

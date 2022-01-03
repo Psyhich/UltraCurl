@@ -9,16 +9,19 @@ TEST(URIParsingTest, AddressParsingTest)
 	std::string address = "blob://some.random.address.com:8999/path/to/file.txt?q=Text#sample";
 	CURI addressURI(address);
 
+	ASSERT_STREQ(addressURI.GetFullURI().c_str(), address.c_str());
 	ASSERT_STREQ(addressURI.GetPureAddress()->c_str(), "some.random.address.com");
 
 	address = "random_proto://really.original.address.org/path/to/file.txt";
 	addressURI = address;
 
+	ASSERT_STREQ(addressURI.GetFullURI().c_str(), address.c_str());
 	ASSERT_STREQ(addressURI.GetPureAddress()->c_str(), "really.original.address.org");
 
 	address = "surrelly.not.a.log4j.server.com";
 	addressURI = address;
 
+	ASSERT_STREQ(addressURI.GetFullURI().c_str(), address.c_str());
 	ASSERT_STREQ(addressURI.GetPureAddress()->c_str(), address.c_str());
 }
 
