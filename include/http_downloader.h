@@ -20,12 +20,12 @@ namespace Downloaders
 	template<class SocketClass> class CHTTPDownloader
 	{
 	public:
+		static_assert(std::is_base_of<Sockets::CSocket, SocketClass>::value, "Class should inherit CSocket");
+
 		CHTTPDownloader() {}
 
 		std::optional<HTTP::CHTTPResponse> Download(const CURI &cURI)
 		{
-			static_assert(std::is_base_of<Sockets::CSocket, SocketClass>::value, "Class should inherit CSocket");
-
 			// Firstly we should form request for some server and sent it
 			// After that we can read all data from socket and parse it as response 
 			const std::optional<std::string> csRequest = ConstructRequest(cURI);
