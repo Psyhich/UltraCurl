@@ -19,6 +19,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(SOURCES 
 	include/http_downloader.h
+	include/downloader_pool.h
 	include/sockets.h src/sockets.cpp 
 	include/uri.h src/uri.cpp
 	include/response.h src/response.cpp
@@ -54,6 +55,9 @@ add_subdirectory(lib/googletest)
 enable_testing()
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
+target_link_libraries(${PROJECT_NAME}
+	pthread
+)
 target_include_directories(${PROJECT_NAME} PUBLIC include/)
 
 add_executable(ultra_curlcli ${CLI_BUILD})

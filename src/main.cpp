@@ -6,6 +6,7 @@
 #include <string>
 #include <sstream>
 
+#include "downloader_pool.h"
 #include "http_downloader.h"
 #include "cli_helper.h"
 #include "sockets.h"
@@ -102,9 +103,11 @@ bool GetStreams(std::istream *&pInputStream, std::ostream *&pOutputStream,
 	return true;
 }
 
-void WriteIntoFiles(std::istream *const pInputStream, std::ostream *pOutputStream, 
+void WriteIntoFiles(std::istream *const pInputStream, std::ostream*, 
 	const CLI::CCLIHelper &cParamaters) noexcept
 {
+	Downloaders::Concurrency::CConcurrentDownloader<Sockets::CTcpSocket> downloaderPool;
+
 	// Now reading the stream and after each \n downloading the file from URI
 	std::string sLine; 
 	while(getline(*pInputStream, sLine))
@@ -114,60 +117,58 @@ void WriteIntoFiles(std::istream *const pInputStream, std::ostream *pOutputStrea
 		// Checking for available stream
 		// If we don't pipe data, saving into files
 		// But checking if can overwrite constructed file names
-		if(pOutputStream == nullptr)
+		// Constructing file name from request path and content type
+		const auto path = pageURI.GetPath();
+		if(path && path->has_filename())
 		{
-			// Constructing file name from request path and content type
-			const auto path = pageURI.GetPath();
-			if(path && path->has_filename())
-			{
-				sFileName = path->filename();
-			}
-			else
-			{
-				if(auto sPageAddress = pageURI.GetPureAddress())
-				{
-					sFileName = std::move(*sPageAddress);
-				} 
-				else
-				{
-					fprintf(stderr, "Invalid URI: %s", sLine.c_str());
-					continue;
-				}
-			}
-			// Checking if we won't overwrite anything
-			const bool cbIsRewriteForced = 
-				cParamaters.CheckIfParameterExist("force");
-
-			std::ifstream fileToCheck{sFileName};
-			if(!fileToCheck || cbIsRewriteForced)
-			{
-				fileToCheck.close();
-				pOutputStream = new std::ofstream{sFileName};
-			}
-			else 
-			{
-				fileToCheck.close();
-				fprintf(stderr, "Cannot overwrite: %s\n", sFileName.c_str());
-				continue;
-			}
-		}
-		
-		// Downloading data
-		HTTPTcpDownloader downloader;
-		if(auto cResponse = downloader.Download(pageURI))
-		{
-			pOutputStream->write(cResponse->GetData().data(), cResponse->GetData().size());
-			if(pOutputStream != &std::cout)
-			{
-				printf("Saved: %s\n", sFileName.c_str());
-				delete pOutputStream;
-				pOutputStream = nullptr;
-			}
+			sFileName = path->filename();
 		}
 		else
 		{
-			printf("Failed to download from: %s\n", sLine.c_str());
+			if(auto sPageAddress = pageURI.GetPureAddress())
+			{
+				sFileName = std::move(*sPageAddress);
+			} 
+			else
+			{
+				fprintf(stderr, "Invalid URI: %s", sLine.c_str());
+				continue;
+			}
 		}
+		// Checking if we won't overwrite anything
+		const bool cbIsRewriteForced = 
+			cParamaters.CheckIfParameterExist("force");
+
+		std::ifstream fileToCheck{sFileName};
+		std::ofstream *pFileToWriteInto;
+		if(!fileToCheck || cbIsRewriteForced)
+		{
+			fileToCheck.close();
+			pFileToWriteInto = new std::ofstream{sFileName};
+		}
+		else 
+		{
+			fileToCheck.close();
+			fprintf(stderr, "Cannot overwrite: %s\n", sFileName.c_str());
+			continue;
+		}
+		
+		// Downloading data
+		downloaderPool.AddNewTask(pageURI, 
+		[pFileToWriteInto, sFileName, sLine](std::optional<HTTP::CHTTPResponse> &&cResponse)
+		{
+			if(cResponse)
+			{
+				pFileToWriteInto->write(cResponse->GetData().data(), cResponse->GetData().size());
+				printf("Saved: %s\n", sFileName.c_str());
+			}
+			else
+			{
+				printf("Failed to download from: %s\n", sLine.c_str());
+			}
+			delete pFileToWriteInto;
+			return false;
+		});
 	}
 }
 
