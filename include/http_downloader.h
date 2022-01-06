@@ -170,8 +170,8 @@ namespace Downloaders
 			else if(cContentLengthHeader != cResponseHeaders.end())
 			{
 				// Parsing bytes count value
-				size_t nBytesCount = 0;
-				size_t nNumberEndPosition;
+				size_t nBytesCount{0};
+				size_t nNumberEndPosition{0}; // Will be changed by stoull
 				try
 				{
 					nBytesCount = std::stoull(cContentLengthHeader->second, &nNumberEndPosition);
@@ -181,7 +181,7 @@ namespace Downloaders
 					fprintf(stderr, "Failed to determine length of content\n");
 					return false;
 				}
-				// Checking if headers is invalid
+				// Checking if headers is valid
 				if(nNumberEndPosition == cContentLengthHeader->second.size())
 				{
 					possiblyReadData = m_pSocket->ReadCount(nBytesCount);

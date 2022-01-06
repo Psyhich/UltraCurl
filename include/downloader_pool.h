@@ -178,5 +178,4 @@ namespace Downloaders::Concurrency
 	};
 }
 
-
 #endif // DOWNLOADER_POOL_H
