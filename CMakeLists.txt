@@ -12,9 +12,9 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 	)
 endif()
 
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
 # GoogleTest requires at least C++11
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(SOURCES 
@@ -75,7 +75,6 @@ endif()
 
 
 include(GoogleTest)
-#include(Dart)
 gtest_discover_tests(tests)
 
 # Automaticaly running all tests on build
@@ -83,4 +82,4 @@ add_custom_command(TARGET ultra_curlcli
 					POST_BUILD
 					COMMAND ctest -C $<CONFIGURATION> 
 						--output-on-failure
-						)
+)

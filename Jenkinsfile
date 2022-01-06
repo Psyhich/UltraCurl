@@ -1,6 +1,6 @@
 pipeline {
 	agent any
-	environment{
+	environment {
 		GIT_URL = 'https://github.com/Psyhich/UltraCurl'
 	}
 	stages {
@@ -30,7 +30,7 @@ pipeline {
 			steps{
 				dir("build") {
 					sh 'make tests_coverage'
-					cobertura autoUpdateHealth: false, autoUpdateStability: false, coberturaReportFile: 'cobertura.xml', conditionalCoverageTargets: '70, 80, 80', lineCoverageTargets: '80, 80, 80', maxNumberOfBuilds: 0, methodCoverageTargets: '80, 80, 80', onlyStable: false, sourceEncoding: 'ASCII', zoomCoverageChart: false
+					cobertura autoUpdateHealth: false, autoUpdateStability: false, coberturaReportFile: 'cobertura.xml', conditionalCoverageTargets: '70, 80, 80', lineCoverageTargets: '80, 80, 80', maxNumberOfBuilds: 0, methodCoverageTargets: '80, 80, 80', onlyStable: false, sourceEncoding: 'ASCII', zoomCoverageChart: true
 				}
 			}
 
@@ -45,14 +45,14 @@ pipeline {
 				}
 			}
 		}
-		stage("Publish to GitHub") {
-			steps{
-				dir("build"){
-					publishCoverage adapters: [coberturaAdapter('cobertura.xml')], sourceFileResolver: sourceFiles('NEVER_STORE')
-				}
-				step([$class: 'MasterCoverageAction', scmVars: [GIT_URL: env.GIT_URL]])
-				step([$class: 'CompareCoverageAction', publishResultAs: 'statusCheck', skipPublishingChecks: true, scmVars: [GIT_URL: env.GIT_URL]])
+	}
+	post {
+		always {
+			dir("build"){
+				publishCoverage adapters: [coberturaAdapter('cobertura.xml')], sourceFileResolver: sourceFiles('NEVER_STORE')
 			}
+			step([$class: 'MasterCoverageAction', scmVars: [GIT_URL: env.GIT_URL]])
+			step([$class: 'CompareCoverageAction', publishResultAs: 'statusCheck', skipPublishingChecks: true, scmVars: [GIT_URL: env.GIT_URL]])
 		}
 	}
 }

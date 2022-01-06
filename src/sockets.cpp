@@ -55,6 +55,9 @@ std::optional<sockaddr> Sockets::CTcpSocket::GetSocketAddress() const noexcept
 Sockets::CTcpSocket::CTcpSocket(
 	const std::string& addressToUse) : CSocket(addressToUse)
 {
+	m_nReadBytes = 0;
+	m_nBytesToRead = 0;
+
 	// Getting address info to know which IP protocol to use
 	std::optional<sockaddr> cResolvedAddress = GetSocketAddress();
 	if(!cResolvedAddress)
@@ -150,6 +153,9 @@ std::optional<std::vector<char>> Sockets::CTcpSocket::ReadTillEnd() noexcept
 			messageVector.push_back(chBuffer[nCount]);
 		}
 
+		*m_nReadBytes += nRecivedBytes;
+		*m_nBytesToRead += nRecivedBytes;
+
 	} while(nRecivedBytes != 0);
 
 	messageVector.shrink_to_fit();
@@ -189,6 +195,8 @@ std::optional<std::vector<char>> Sockets::CTcpSocket::ReadTill(const std::string
 		{
 			nCurrentStringIndex = 0;
 		}
+		*m_nReadBytes += 1;
+		*m_nBytesToRead += 1;
 	}
 	return std::nullopt;
 }
@@ -211,6 +219,8 @@ std::optional<std::vector<char>> Sockets::CTcpSocket::ReadCount(size_t nCountToR
 
 	ssize_t nBytesRead = 0;
 	size_t nBytesLeft = nCountToRead;
+
+	*m_nBytesToRead += nCountToRead;
 	while(nBytesLeft > 0)
 	{
 		const ssize_t nBytesRecived = 
@@ -227,6 +237,7 @@ std::optional<std::vector<char>> Sockets::CTcpSocket::ReadCount(size_t nCountToR
 		}
 		nBytesRead += nBytesRecived;
 		nBytesLeft = nBytesLeft - nBytesRecived;
+		*m_nReadBytes += nBytesRecived;
 	}
 
 	return readData;
