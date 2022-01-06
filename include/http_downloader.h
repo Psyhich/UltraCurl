@@ -14,10 +14,9 @@
 namespace Downloaders 
 {
 
-	/* 
-		Class responsible for downloading any given file 
-		using HTTP protocol.
-	*/
+	///	Class responsible for downloading any given file 
+	///	using HTTP application protocol.
+	///	It can use any socket class that inherits CSocket
 	template<class SocketClass> class CHTTPDownloader
 	{
 	public:
@@ -40,7 +39,6 @@ namespace Downloaders
 				return std::nullopt;
 			}
 			headers.insert({std::string("Accept"), std::string("*/*")});
-			//headers.insert({std::string("Connection"), std::string("close")});
 			headers.insert({std::string("Accept-Encoding"), std::string("identity")});
 			// TODO: think about adding encoding support with gzip and other libraries
 			
@@ -110,16 +108,21 @@ namespace Downloaders
 			{
 				// Parsing bytes count value
 				size_t nBytesCount = 0;
+				size_t nNumberEndPosition;
 				try
 				{
-					nBytesCount = std::stoi(cContentLengthHeader->second);
+					nBytesCount = std::stoull(cContentLengthHeader->second, &nNumberEndPosition);
 				}
 				catch(const std::exception &err)
 				{
 					fprintf(stderr, "Failed to determine length of content\n");
 					return std::nullopt;
 				}
-				possiblyReadData = pSocket->ReadCount(nBytesCount);
+				// Checking if headers is invalid
+				if(nNumberEndPosition == cContentLengthHeader->second.size())
+				{
+					possiblyReadData = pSocket->ReadCount(nBytesCount);
+				}
 				bIsReadData = true;
 			}
 			else

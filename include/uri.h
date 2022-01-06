@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <optional>
 
+/// Utility class for easier parsing of URIs 
+/// specified by RFC3986
 class CURI {
 public:
 	CURI(const std::string& cStringToSet);

@@ -18,7 +18,7 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(SOURCES 
-	include/http_downloader.h src/http_downloader.cpp
+	include/http_downloader.h
 	include/sockets.h src/sockets.cpp 
 	include/uri.h src/uri.cpp
 	include/response.h src/response.cpp
@@ -27,7 +27,13 @@ set(CLI_BUILD
 	src/main.cpp
 	include/cli_helper.h src/cli_helper.cpp
 )
-set(TESTS tests/uri_tests.cpp)
+set(TESTS 
+	tests/uri_tests.cpp
+	tests/cli_helper_tests.cpp
+	tests/response_tests.cpp
+	tests/downloader_tests.cpp
+	include/cli_helper.h src/cli_helper.cpp # adding files which need to be tested
+)
 
 # Setting flags for coverage test
 set(CMAKE_CXX_FLAGS_DEBUG " -g -O0 -fprofile-arcs -ftest-coverage ${CMAKE_C_FLAGS_DEBUG}")
@@ -64,8 +70,7 @@ target_link_libraries( tests
 )
 if(CMAKE_COMPILER_IS_GNUCXX)
 	include(CodeCoverage)
-	# Currenty I cannot make parameters more universal, so I have to use python regexp
-	SETUP_TARGET_FOR_COVERAGE_COBERTURA(tests_coverage tests cobertura "\".*/(tests.cpp|main.cpp)\"")
+	SETUP_TARGET_FOR_COVERAGE_COBERTURA(tests_coverage tests cobertura "\"(.*lib.*|.*tests.*|.*main.cpp)\"")
 endif()
 
 

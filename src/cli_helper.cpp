@@ -2,9 +2,10 @@
 
 #include "cli_helper.h"
 
-CLI::CCLIHelper::CCLIHelper(int iArgc, char *const cszArgv[])
+CLI::CCLIHelper::CCLIHelper(int iArgc, const char *const cszArgv[])
 {
-	if(iArgc < 1)
+
+	if(iArgc <= 0 || cszArgv == nullptr)
 	{
 		return;
 	}

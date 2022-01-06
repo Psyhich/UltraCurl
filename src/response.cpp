@@ -46,15 +46,17 @@ bool HTTP::CHTTPResponse::LoadStatusLine(size_t &nIndex,
 bool HTTP::CHTTPResponse::LoadHeaders(size_t &nIndex, const std::vector<char> &cDataToParse) noexcept
 {
 	m_headers.clear();
+
+	bool bIsFoundEnd{false};
 	
-	bool bIsNewLine = false;
-	bool bIsReadingValue = false;
+	bool bIsNewLine{false};
+	bool bIsReadingValue{false};
 
 	std::string sReadKey;
 	std::string sReadValue;
 
 	// Should split key and value with :
-	for(; nIndex < cDataToParse.size() - 2; nIndex++)
+	for(; nIndex <= cDataToParse.size() - 2; nIndex++)
 	{
 		const char &cchCurrentChar = cDataToParse[nIndex];
 		// if we got CRLF and we had header ended before with CRLF or LF so breaking
@@ -62,6 +64,9 @@ bool HTTP::CHTTPResponse::LoadHeaders(size_t &nIndex, const std::vector<char> &c
 			cDataToParse[nIndex + 1] == '\n' &&
 			bIsNewLine)
 		{
+			// Skipping CRLF, so index will be placed on first byte of data
+			nIndex += 2;
+			bIsFoundEnd = true;
 			break;
 		}
 		// Checking for CRLF or at least LF
@@ -85,7 +90,7 @@ bool HTTP::CHTTPResponse::LoadHeaders(size_t &nIndex, const std::vector<char> &c
 			// Key cannot be empty
 			if(sReadKey.empty())
 			{
-				return false;
+				break;
 			}
 
 			m_headers[sReadKey] = std::move(sReadValue);
@@ -112,7 +117,8 @@ bool HTTP::CHTTPResponse::LoadHeaders(size_t &nIndex, const std::vector<char> &c
 		}
 		bIsNewLine = false;
 	}
-	return true;
+
+	return bIsFoundEnd;
 }
 
 void HTTP::CHTTPResponse::LoadData(size_t &nIndex, 
