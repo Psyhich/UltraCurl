@@ -18,6 +18,7 @@
 namespace Downloaders::Concurrency
 {
 
+	// TODO: don't forget to add Join func!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	/// Callback that should accept HTTP response and should specify if download should be repeated
 	using FDownloadCallback = 
 		std::function<bool(std::optional<HTTP::CHTTPResponse>&&)>;
@@ -46,31 +47,53 @@ namespace Downloaders::Concurrency
 			}
 		};
 	public:
-
 		CConcurrentDownloader(unsigned uMaxCountOfThreads) : 
 			m_uMaxCountOfThreads{uMaxCountOfThreads}
 		{
+			m_uMaxCountOfThreads = uMaxCountOfThreads;
+			m_bShouldStop = new(std::nothrow) bool(false);
+			m_bCanAddNewTasks = new(std::nothrow) bool(true);
+			m_runningDownloadsLock = new(std::nothrow) std::mutex();
+			m_uriQueueLock = new(std::nothrow) std::mutex();
 		}
 		CConcurrentDownloader()
 		{
 			m_uMaxCountOfThreads = std::thread::hardware_concurrency();
+			m_bShouldStop = new(std::nothrow) bool(false);
+			m_bCanAddNewTasks = new(std::nothrow) bool(true);
+			m_runningDownloadsLock = new(std::nothrow) std::mutex();
+			m_uriQueueLock = new(std::nothrow) std::mutex();
 		}
 		~CConcurrentDownloader()
 		{
 			// Clearing queue of URIs put for download
 			std::queue<std::pair<size_t, WorkingTuple>>().swap(m_urisToDownload);
-			// Setting stop flag
-			m_bShouldStop = true;
-			// Joining all threads
-			m_runningDownloadsLock.lock();
-			for(auto &dataPair : m_runningDownloads)
+
+			// Setting stop flag if we can do that
+			if(m_bShouldStop && m_bCanAddNewTasks)
 			{
-				if(dataPair.second.m_runningThread.joinable())
-				{
-					dataPair.second.m_runningThread.join();
-				}
+				*m_bShouldStop = true;
+				*m_bCanAddNewTasks = false;
 			}
-			m_runningDownloadsLock.unlock();
+
+			// Joining all threads if we can
+			if(m_runningDownloadsLock)
+			{
+				m_runningDownloadsLock->lock();
+				for(auto &dataPair : m_runningDownloads)
+				{
+					if(dataPair.second.m_runningThread.joinable())
+					{
+						dataPair.second.m_runningThread.join();
+					}
+				}
+				m_runningDownloadsLock->unlock();
+			}
+
+			delete m_bShouldStop;
+			delete m_bCanAddNewTasks;
+			delete m_runningDownloadsLock;
+			delete m_uriQueueLock;
 		}
 		
 		// We cannot copy threads
@@ -79,15 +102,39 @@ namespace Downloaders::Concurrency
 		// We can change their owner
 		CConcurrentDownloader(CConcurrentDownloader &&downloaderToMove)
 		{
-			m_runningDownloads = std::move(downloaderToMove.m_runningDownloads);
-			m_urisToDownload = std::move(downloaderToMove.m_urisToDownload);
+			m_runningDownloads.swap(downloaderToMove.m_runningDownloads);
+			m_urisToDownload.swap(downloaderToMove.m_urisToDownload);
+
+			m_runningDownloadsLock = downloaderToMove.m_runningDownloadsLock;
+			m_uriQueueLock = downloaderToMove.m_uriQueueLock;
+			
+			m_bShouldStop = downloaderToMove.m_bShouldStop;
+			m_bCanAddNewTasks = downloaderToMove.m_bCanAddNewTasks;
+
+			downloaderToMove.m_runningDownloadsLock = nullptr;
+			downloaderToMove.m_uriQueueLock = nullptr;
+			
+			downloaderToMove.m_bShouldStop = nullptr;
+			downloaderToMove.m_bCanAddNewTasks = nullptr;
 		}
 		CConcurrentDownloader &operator =(CConcurrentDownloader &&downloaderToMove)
 		{
 			if(this != &downloaderToMove)
 			{
-				m_runningDownloads = std::move(downloaderToMove.m_runningDownloads);
-				m_urisToDownload = std::move(downloaderToMove.m_urisToDownload);
+				m_runningDownloads.swap(downloaderToMove.m_runningDownloads);
+				m_urisToDownload.swap(downloaderToMove.m_urisToDownload);
+
+				m_runningDownloadsLock = downloaderToMove.m_runningDownloadsLock;
+				m_uriQueueLock = downloaderToMove.m_uriQueueLock;
+				
+				m_bShouldStop = downloaderToMove.m_bShouldStop;
+				m_bCanAddNewTasks = downloaderToMove.m_bCanAddNewTasks;
+
+				downloaderToMove.m_runningDownloadsLock = nullptr;
+				downloaderToMove.m_uriQueueLock = nullptr;
+				
+				downloaderToMove.m_bShouldStop = nullptr;
+				downloaderToMove.m_bCanAddNewTasks = nullptr;
 			}
 
 			return *this;
@@ -97,19 +144,33 @@ namespace Downloaders::Concurrency
 		void AddNewTask(const CURI &cURIToDownload, FDownloadCallback fCallback) noexcept
 		{
 			// We can't add new tasks if we already stoped processing
-			if(m_bShouldStop)
+			if(*m_bShouldStop || !*m_bCanAddNewTasks)
 			{
 				return;
 			}
 			WorkingTuple workerData{cURIToDownload};
 			workerData.m_fCallback = fCallback;
 
-			m_uriQueueLock.lock();
+			m_uriQueueLock->lock();
 			m_urisToDownload.push(std::make_pair(m_nCurrentID, std::move(workerData)));
 			++m_nCurrentID;
-			m_uriQueueLock.unlock();
+			m_uriQueueLock->unlock();
 
 			LoadQueueIntoDownloads();
+		}
+
+		void JoinTasksCompletion()
+		{
+			*m_bCanAddNewTasks = false;
+			m_runningDownloadsLock->lock();
+			for(auto &dataPair : m_runningDownloads)
+			{
+				if(dataPair.second.m_runningThread.joinable())
+				{
+					dataPair.second.m_runningThread.join();
+				}
+			}
+			m_runningDownloadsLock->unlock();
 		}
 	private:
 		void DownloadTask(std::pair<size_t, WorkingTuple> &dataPair) noexcept
@@ -122,13 +183,13 @@ namespace Downloaders::Concurrency
 			while(dataPair.second.m_fCallback(std::move(gotData)) && !m_bShouldStop);
 
 			// If we already stoping execution, we don't need to remove task here
-			if(!m_bShouldStop)
+			if(!*m_bShouldStop)
 			{
 				// After we completed download and callback doesn't require reload
 				// removing this pair of data from map
-				m_runningDownloadsLock.lock();
+				m_runningDownloadsLock->lock();
 				DeleteTaskByID(dataPair.first);
-				m_runningDownloadsLock.unlock();
+				m_runningDownloadsLock->unlock();
 
 				// Loading new values into map
 				LoadQueueIntoDownloads();
@@ -148,10 +209,14 @@ namespace Downloaders::Concurrency
 
 		void LoadQueueIntoDownloads() noexcept
 		{
-			m_uriQueueLock.lock();
+			if(!*m_bCanAddNewTasks)
+			{
+				return;
+			}
+			m_uriQueueLock->lock();
 			while(m_runningDownloads.size() < m_uMaxCountOfThreads && !m_urisToDownload.empty())
 			{
-				m_runningDownloadsLock.lock();
+				m_runningDownloadsLock->lock();
 				m_runningDownloads.push_back(std::move(m_urisToDownload.front()));
 				m_urisToDownload.pop();
 				std::pair<size_t, WorkingTuple> &queuePair = std::ref(m_runningDownloads.back());
@@ -159,22 +224,23 @@ namespace Downloaders::Concurrency
 				queuePair.second.m_runningThread = 
 					std::thread(&Concurrency::CConcurrentDownloader<SocketClass>::DownloadTask, this, std::ref(queuePair));
 
-				m_runningDownloadsLock.unlock();
+				m_runningDownloadsLock->unlock();
 			}
-			m_uriQueueLock.unlock();
+			m_uriQueueLock->unlock();
 
 		}
 	private:
 		size_t m_nCurrentID{0};
 
-		std::mutex m_runningDownloadsLock;
+		std::mutex *m_runningDownloadsLock{nullptr};
 		std::list<std::pair<size_t, WorkingTuple>> m_runningDownloads;
 
-		std::mutex m_uriQueueLock;
+		std::mutex *m_uriQueueLock{nullptr};
 		std::queue<std::pair<size_t, WorkingTuple>> m_urisToDownload;
 
 		unsigned m_uMaxCountOfThreads;
-		bool m_bShouldStop{false};
+		bool *m_bShouldStop{nullptr};
+		bool *m_bCanAddNewTasks{nullptr};
 	};
 }
 

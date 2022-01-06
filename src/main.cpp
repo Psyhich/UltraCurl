@@ -1,29 +1,22 @@
-#include <istream>
 #include <unistd.h>
 
 #include <iostream>
+#include <istream>
 #include <fstream>
 #include <string>
 #include <sstream>
 
-#include "downloader_pool.h"
-#include "http_downloader.h"
 #include "cli_helper.h"
-#include "sockets.h"
-#include "uri.h"
+#include "base_functionality.h"
 
 constexpr const char* HELP_MESSAGE =
 "Usage:\n"
 "%s <url> [options]\n"
 "-f, --file <filepath>	file to read links from(should be divided with newlines)\n"
-"-h, --help, --usage	show help\n";
-
-using HTTPTcpDownloader = Downloaders::CHTTPDownloader<Sockets::CTcpSocket>;
+"-h, --help, --usage	show help\n"
+"-t --threads			count of threads to use";
 
 void PrintUsage(const std::string &name);
-
-void WriteIntoFiles(std::istream *const pInputStream, std::ostream *const pOutputStream, 
-	const CLI::CCLIHelper &cParamaters) noexcept;
 
 bool GetStreams(std::istream *&pInputStream, std::ostream *&pOutputStream, 
 	const CLI::CCLIHelper &cParameters) noexcept;
@@ -39,7 +32,34 @@ int main(int iArgc, char *argv[]) {
 		return -1;
 	}
 
-	WriteIntoFiles(pInputStream, pOutputStream, cParamaters);
+	// Getting count of threads to use
+	// If we are not piping anything out, writing into files(so using threads)
+	if(pOutputStream == nullptr)
+	{
+		// Getting count of threads
+		unsigned uCountOfThreads = 0;
+		// Trying to convert parameter -t OR --threads otherwise it's 0
+		try
+		{
+			uCountOfThreads = std::stoul(
+				cParamaters.GetParameterValue("t")
+				.value_or(cParamaters.GetParameterValue("threads")
+					.value_or("0")));
+		}
+		catch(...)
+		{
+			fprintf(stderr, "Wrong count of threads passed");
+		}
+		// Checking if we can overwite
+		const bool cbShouldOverwrite = 
+			cParamaters.CheckIfParameterExist("f") || cParamaters.CheckIfParameterExist("force");
+
+		APIFunctionality::WriteIntoFiles(pInputStream, cbShouldOverwrite, uCountOfThreads);
+	}
+	else
+	{
+		APIFunctionality::WriteIntoStream(pInputStream, pOutputStream);
+	}
 
 	// Dealocating input stream if it was allocated
 	if(pInputStream != &std::cin)
@@ -103,74 +123,6 @@ bool GetStreams(std::istream *&pInputStream, std::ostream *&pOutputStream,
 	return true;
 }
 
-void WriteIntoFiles(std::istream *const pInputStream, std::ostream*, 
-	const CLI::CCLIHelper &cParamaters) noexcept
-{
-	Downloaders::Concurrency::CConcurrentDownloader<Sockets::CTcpSocket> downloaderPool;
-
-	// Now reading the stream and after each \n downloading the file from URI
-	std::string sLine; 
-	while(getline(*pInputStream, sLine))
-	{
-		const CURI pageURI = CURI(sLine);
-		std::string sFileName;
-		// Checking for available stream
-		// If we don't pipe data, saving into files
-		// But checking if can overwrite constructed file names
-		// Constructing file name from request path and content type
-		const auto path = pageURI.GetPath();
-		if(path && path->has_filename())
-		{
-			sFileName = path->filename();
-		}
-		else
-		{
-			if(auto sPageAddress = pageURI.GetPureAddress())
-			{
-				sFileName = std::move(*sPageAddress);
-			} 
-			else
-			{
-				fprintf(stderr, "Invalid URI: %s", sLine.c_str());
-				continue;
-			}
-		}
-		// Checking if we won't overwrite anything
-		const bool cbIsRewriteForced = 
-			cParamaters.CheckIfParameterExist("force");
-
-		std::ifstream fileToCheck{sFileName};
-		std::ofstream *pFileToWriteInto;
-		if(!fileToCheck || cbIsRewriteForced)
-		{
-			fileToCheck.close();
-			pFileToWriteInto = new std::ofstream{sFileName};
-		}
-		else 
-		{
-			fileToCheck.close();
-			fprintf(stderr, "Cannot overwrite: %s\n", sFileName.c_str());
-			continue;
-		}
-		
-		// Downloading data
-		downloaderPool.AddNewTask(pageURI, 
-		[pFileToWriteInto, sFileName, sLine](std::optional<HTTP::CHTTPResponse> &&cResponse)
-		{
-			if(cResponse)
-			{
-				pFileToWriteInto->write(cResponse->GetData().data(), cResponse->GetData().size());
-				printf("Saved: %s\n", sFileName.c_str());
-			}
-			else
-			{
-				printf("Failed to download from: %s\n", sLine.c_str());
-			}
-			delete pFileToWriteInto;
-			return false;
-		});
-	}
-}
 
 void PrintUsage(const std::string& name)
 {

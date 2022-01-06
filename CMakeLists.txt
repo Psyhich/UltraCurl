@@ -18,11 +18,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(SOURCES 
+	include/base_functionality.h src/base_functionality.cpp
 	include/http_downloader.h
 	include/downloader_pool.h
-	include/sockets.h src/sockets.cpp 
 	include/uri.h src/uri.cpp
 	include/response.h src/response.cpp
+	include/sockets.h src/sockets.cpp 
 )
 set(CLI_BUILD 
 	src/main.cpp
