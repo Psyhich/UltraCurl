@@ -1,17 +1,10 @@
 #ifndef BASE_FUNCTIONALITY_H
 #define BASE_FUNCTIONALITY_H
 
-#include <unistd.h>
-
-#include <iostream>
 #include <istream>
-#include <fstream>
-#include <string>
-#include <sstream>
+#include <ostream>
+#include <optional>
 
-#include "downloader_pool.h"
-#include "http_downloader.h"
-#include "sockets.h"
 #include "uri.h"
 
 namespace APIFunctionality

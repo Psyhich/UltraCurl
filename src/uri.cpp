@@ -5,7 +5,6 @@
 
 CURI::CURI(const std::string& cStringToSet) : m_originalString{cStringToSet}
 {
-
 }
 
 std::optional<std::string> CURI::GetProtocol() const noexcept

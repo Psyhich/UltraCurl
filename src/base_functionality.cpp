@@ -1,4 +1,12 @@
+#include <fstream>
+#include <string>
+#include <sstream>
+
 #include "base_functionality.h"
+
+#include "downloader_pool.h"
+#include "http_downloader.h"
+#include "sockets.h"
 
 using HTTPTcpDownloader = Downloaders::CHTTPDownloader<Sockets::CTcpSocket>;
 using ConcurrentDownloaders = Downloaders::Concurrency::CConcurrentDownloader<Sockets::CTcpSocket>;

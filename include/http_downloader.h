@@ -6,7 +6,6 @@
 #include <vector>
 #include <map>
 #include <numeric>
-#include <iostream>
 
 #include "sockets.h"
 #include "response.h"

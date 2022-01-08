@@ -35,6 +35,7 @@ set(TESTS
 	tests/response_tests.cpp
 	tests/downloader_tests.cpp
 	include/cli_helper.h src/cli_helper.cpp # adding files which need to be tested
+	tests/test_socket.h tests/test_socket.cpp
 )
 
 # Setting flags for coverage test
