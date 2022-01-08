@@ -221,10 +221,10 @@ TEST(HTTPDownloaderTests, BaseLengthSpecifiedTest)
 	Downloaders::CHTTPDownloader<TestSocket<LengthSpecificParams>> downloader;
 	const auto cGotData = downloader.Download(CURI("http://www.my.site.com/some/file.html"));
 	
+	ASSERT_TRUE(cGotData);
+
 	HTTP::CHTTPResponse cRealResponse;
 	cRealResponse.LoadAll(std::vector<char>{params.sDataToUse.begin(), params.sDataToUse.end()});
-	
-	ASSERT_TRUE(cGotData);
 
 	ASSERT_EQ(cGotData->GetCode(), cRealResponse.GetCode());
 	ASSERT_EQ(cGotData->GetHeaders(), cRealResponse.GetHeaders());

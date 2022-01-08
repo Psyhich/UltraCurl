@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <iostream>
 
 #include "response.h"
 
@@ -52,8 +53,8 @@ bool HTTP::CHTTPResponse::LoadHeaders(size_t &nIndex, const std::vector<char> &c
 	bool bIsNewLine{false};
 	bool bIsReadingValue{false};
 
-	std::string sReadKey;
-	std::string sReadValue;
+	std::string sReadKey{""};
+	std::string sReadValue{""};
 
 	// Should split key and value with :
 	for(; nIndex <= cDataToParse.size() - 2; nIndex++)
@@ -93,7 +94,7 @@ bool HTTP::CHTTPResponse::LoadHeaders(size_t &nIndex, const std::vector<char> &c
 				break;
 			}
 
-			m_headers[sReadKey] = std::move(sReadValue);
+			m_headers[sReadKey] = sReadValue;
 
 			sReadKey = "";
 			sReadValue = "";

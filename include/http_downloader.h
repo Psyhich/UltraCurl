@@ -26,37 +26,43 @@ namespace Downloaders
 
 		std::optional<HTTP::CHTTPResponse> Download(const CURI &cURI)
 		{
-			// Firstly we should form request for some server and sent it
-			// After that we can read all data from socket and parse it as response 
-			const std::optional<std::string> csRequest = ConstructRequest(cURI);
-			if(!csRequest)
+			std::optional<HTTP::CHTTPResponse> response{HTTP::CHTTPResponse()};
+			do
 			{
-				return std::nullopt;
-			}
+				// Firstly we should form request for some server and sent it
+				// After that we can read all data from socket and parse it as response 
+				const std::optional<std::string> csRequest = ConstructRequest(cURI);
+				if(!csRequest)
+				{
+					response = std::nullopt;
+					break;
+				}
 
-			m_pSocket = new SocketClass(cURI.GetFullURI());
-			// Sending request
-			if(!m_pSocket->Write(csRequest->data(), csRequest->size()))
-			{
-				fprintf(stderr, "Failed to send request!\n");
-				return std::nullopt;
-			}
+				m_pSocket = new SocketClass(cURI.GetFullURI());
+				// Sending request
+				if(!m_pSocket->Write(csRequest->data(), csRequest->size()))
+				{
+					fprintf(stderr, "Failed to send request!\n");
+					response = std::nullopt;
+					break;
+				}
 
-			HTTP::CHTTPResponse response;
+				if(!LoadResponseHeaders(*response))
+				{
+					response = std::nullopt;
+					break;
+				}
 
-			if(!LoadResponseHeaders(response))
-			{
-				return std::nullopt;
-			}
+				if(!LoadResponseData(*response))
+				{
+					response = std::nullopt;
+					break;
+				}
 
-			if(!LoadResponseData(response))
-			{
-				return std::nullopt;
-			}
+			} while(false);
 
 			delete m_pSocket;
 			m_pSocket = nullptr;
-
 			return response;
 		}
 

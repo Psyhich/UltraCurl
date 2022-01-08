@@ -24,8 +24,8 @@ bool GetStreams(std::istream *&pInputStream, std::ostream *&pOutputStream,
 int main(int iArgc, char *argv[]) {
 	const CLI::CCLIHelper cParamaters{iArgc, argv};
 
-	std::istream *pInputStream = nullptr;
-	std::ostream *pOutputStream = nullptr;
+	std::istream *pInputStream{nullptr};
+	std::ostream *pOutputStream{nullptr};
 	
 	if(!GetStreams(pInputStream, pOutputStream, cParamaters))
 	{

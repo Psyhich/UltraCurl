@@ -32,11 +32,11 @@ void APIFunctionality::WriteIntoFiles(std::istream *const cpInputStream, const b
 			continue;
 		}
 
-		std::ofstream *pFileToWriteInto{nullptr};
+		std::ofstream *pFileToWriteInto;
 		// Checking if we can overwrite file or create new
-		if(!APIFunctionality::Utility::CheckIfFileExists(sFileName) || cbOverwrite)
+		if(cbOverwrite || !APIFunctionality::Utility::CheckIfFileExists(sFileName))
 		{
-			pFileToWriteInto = new std::ofstream{sFileName};
+			pFileToWriteInto = new(std::nothrow) std::ofstream{sFileName};
 		}
 		else 
 		{
@@ -47,25 +47,26 @@ void APIFunctionality::WriteIntoFiles(std::istream *const cpInputStream, const b
 		// Downloading data
 		downloaderPool.AddNewTask(pageURI, 
 		// Callback for completed download
-		[pFileToWriteInto, sFileName, sLine](std::optional<HTTP::CHTTPResponse> &&cResponse)
+		[pFile = pFileToWriteInto, sFileName, sLine](std::optional<HTTP::CHTTPResponse> &&cResponse)
 		{
-			// We don't check for success codes to make user know about any other server state
+			// We don't check for success codes to make user know about any other server states
 			if(cResponse)
 			{
-				pFileToWriteInto->write(cResponse->GetData().data(), cResponse->GetData().size());
+				pFile->write(cResponse->GetData().data(), cResponse->GetData().size());
 				printf("Saved: %s\n", sFileName.c_str());
 			}
 			else
 			{
 				printf("Failed to download from: %s\n", sLine.c_str());
 			}
-			delete pFileToWriteInto;
+			delete pFile;
 			return false;
 		});
 
 		// Setting nullptr, so next iterations couldn't use stream that is already used
 		pFileToWriteInto = nullptr;
 	}
+	downloaderPool.JoinTasksCompletion();
 }
 
 void APIFunctionality::WriteIntoStream(std::istream *const cpInputStream, std::ostream *const cpOutputStream) noexcept
