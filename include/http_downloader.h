@@ -1,6 +1,7 @@
 #ifndef HTTP_DOWNLOADER_H
 #define HTTP_DOWNLOADER_H
 
+#include <cstddef>
 #include <string>
 #include <optional>
 #include <vector>
@@ -65,7 +66,7 @@ namespace Downloaders
 			return response;
 		}
 
-		std::optional<size_t> GetBytesToRead() const noexcept
+		std::optional<std::size_t> GetBytesToRead() const noexcept
 		{
 			if(m_pSocket == nullptr)
 			{
@@ -75,7 +76,7 @@ namespace Downloaders
 			return m_pSocket->GetBytesToRead();
 		}
 
-		std::optional<size_t> GetReadBytes() const noexcept
+		std::optional<std::size_t> GetReadBytes() const noexcept
 		{
 			if(m_pSocket == nullptr)
 			{
@@ -175,8 +176,8 @@ namespace Downloaders
 			else if(cContentLengthHeader != cResponseHeaders.end())
 			{
 				// Parsing bytes count value
-				size_t nBytesCount{0};
-				size_t nNumberEndPosition{0}; // Will be changed by stoull
+				std::size_t nBytesCount{0};
+				std::size_t nNumberEndPosition{0}; // Will be changed by stoull
 				try
 				{
 					nBytesCount = std::stoull(cContentLengthHeader->second, &nNumberEndPosition);
@@ -222,7 +223,7 @@ namespace Downloaders
 		{
 			// If we have chunked encoding we should read till first CRLF and 
 			// Parse those hexadecimal as number of bytes
-			std::optional<size_t> nCountToRead;
+			std::optional<std::size_t> nCountToRead;
 
 			std::vector<char> readChunks;
 			nCountToRead = ReadChunkSize();
@@ -237,7 +238,7 @@ namespace Downloaders
 				// Taking in mind last CRLF, it will be excluded, but needs to be read
 				if(const auto cReadData = m_pSocket->ReadCount(*nCountToRead + 2))
 				{
-					for(size_t nIndex = 0; nIndex < cReadData->size() - 2; nIndex++)
+					for(std::size_t nIndex = 0; nIndex < cReadData->size() - 2; nIndex++)
 					{
 						readChunks.push_back((*cReadData)[nIndex]);
 					}
@@ -251,7 +252,7 @@ namespace Downloaders
 			return std::nullopt;
 		}
 
-		std::optional<size_t> ReadChunkSize() noexcept
+		std::optional<std::size_t> ReadChunkSize() noexcept
 		{
 			// Checking 
 			if(auto readHexadecimal = m_pSocket->ReadTill("\r\n"))
@@ -264,7 +265,7 @@ namespace Downloaders
 				// Parsing hexadecimal
 				try
 				{
-					size_t size = std::stoull(sHexadecimal, nullptr, 16);
+					std::size_t size = std::stoull(sHexadecimal, nullptr, 16);
 					return size;
 				}
 				catch(std::exception &err)

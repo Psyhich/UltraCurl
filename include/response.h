@@ -47,9 +47,9 @@ namespace HTTP
 		void LoadData(const std::vector<char> &cDataToLoad) noexcept;
 
 	private:
-		bool LoadStatusLine(size_t &nIndex, const std::vector<char> &cDataToParse) noexcept;
-		bool LoadHeaders(size_t &nIndex, const std::vector<char> &cDataToParse) noexcept;
-		void LoadData(size_t &nIdex, const std::vector<char> &cDataToLoad) noexcept; 
+		bool LoadStatusLine(std::size_t &nIndex, const std::vector<char> &cDataToParse) noexcept;
+		bool LoadHeaders(std::size_t &nIndex, const std::vector<char> &cDataToParse) noexcept;
+		void LoadData(std::size_t &nIdex, const std::vector<char> &cDataToLoad) noexcept; 
 	private:
 		int m_iCode{0};
 		Headers m_headers;
