@@ -187,3 +187,8 @@ std::optional<std::filesystem::path> CURI::GetPath() const noexcept
 		std::filesystem::path(m_originalString.substr(nPathStart, nPathEnd - nPathStart));
 }
 
+
+bool operator<(const CURI& cLURIToCompare, const CURI &cRURIToCompare) noexcept
+{
+	return cLURIToCompare.m_originalString < cRURIToCompare.m_originalString;
+}

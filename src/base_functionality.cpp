@@ -9,19 +9,19 @@
 #include "sockets.h"
 
 using HTTPTcpDownloader = Downloaders::CHTTPDownloader<Sockets::CTcpSocket>;
-using ConcurrentDownloaders = Downloaders::Concurrency::CConcurrentDownloader<Sockets::CTcpSocket>;
 
-void APIFunctionality::WriteIntoFiles(std::istream *const cpInputStream, const bool cbOverwrite, unsigned uCountOfThreads) noexcept
+APIFunctionality::ConcurrentDownloaders* APIFunctionality::WriteIntoFiles(
+	std::istream *const cpInputStream, const bool cbOverwrite, unsigned uCountOfThreads) noexcept
 {
-	ConcurrentDownloaders downloaderPool;
+	ConcurrentDownloaders *downloaderPool;
 	// If we specify 0 threads, using default value for pool
 	if(uCountOfThreads == 0)
 	{
-		downloaderPool = ConcurrentDownloaders();
+		downloaderPool = new ConcurrentDownloaders();
 	}
 	else
 	{
-		downloaderPool = ConcurrentDownloaders(uCountOfThreads);
+		downloaderPool = new ConcurrentDownloaders(uCountOfThreads);
 	}
 
 	// Now reading the stream and after each \n downloading the file from URI
@@ -53,7 +53,7 @@ void APIFunctionality::WriteIntoFiles(std::istream *const cpInputStream, const b
 		}
 		
 		// Downloading data
-		downloaderPool.AddNewTask(pageURI, 
+		downloaderPool->AddNewTask(pageURI, 
 		// Callback for completed download
 		[pFile = pFileToWriteInto, sFileName, sLine](std::optional<HTTP::CHTTPResponse> &&cResponse)
 		{
@@ -74,7 +74,7 @@ void APIFunctionality::WriteIntoFiles(std::istream *const cpInputStream, const b
 		// Setting nullptr, so next iterations couldn't use stream that is already used
 		pFileToWriteInto = nullptr;
 	}
-	downloaderPool.JoinTasksCompletion();
+	return downloaderPool;
 }
 
 void APIFunctionality::WriteIntoStream(std::istream *const cpInputStream, std::ostream *const cpOutputStream) noexcept

@@ -27,21 +27,21 @@ set(SOURCES
 )
 set(CLI_BUILD 
 	src/main.cpp
-	include/cli_helper.h src/cli_helper.cpp
+	include/cli_args_helper.h src/cli_args_helper.cpp
+	include/cli_progres.h src/cli_progres.cpp
 )
 set(TESTS 
 	tests/uri_tests.cpp
 	tests/cli_helper_tests.cpp
 	tests/response_tests.cpp
 	tests/downloader_tests.cpp
-	include/cli_helper.h src/cli_helper.cpp # adding files which need to be tested
+	include/cli_args_helper.h src/cli_args_helper.cpp # adding files which need to be tested
 	tests/test_socket.h tests/test_socket.cpp
 )
 
 # Setting flags for coverage test
 set(CMAKE_CXX_FLAGS_DEBUG " -g -O0 -fprofile-arcs -ftest-coverage ${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_DEBUG " -g -O0 -fprofile-arcs -ftest-coverage ${CMAKE_C_FLAGS_DEBUG}")
-#option(CodeCoverage "CodeCoverage" OFF)
 
 # Making all warnings errors and turning on pedantic feature in GCC
 if(MSVC)

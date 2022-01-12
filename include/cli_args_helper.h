@@ -1,5 +1,5 @@
-#ifndef CLI_HELPER_H
-#define CLI_HELPER_H
+#ifndef CLI_ARGS_HELPER_H
+#define CLI_ARGS_HELPER_H
 
 #include <string>
 #include <map>
@@ -10,10 +10,10 @@ namespace CLI {
 	/// Paramaters beggining with - or -- treated as paramater name
 	/// Everything without - or -- treated as value for name before or set for "" key
 	/// Paramaters written without value will have "" value
-	class CCLIHelper
+	class CCLIArgsHelper
 	{
 	public:
-		CCLIHelper(int iArgc, const char *const cszArgv[]);
+		CCLIArgsHelper(int iArgc, const char *const cszArgv[]);
 
 		bool CheckIfParameterExist(const std::string& csParameterToCheck) const noexcept;
 		std::optional<std::string> GetParameterValue(const std::string &csParameterToGet) const noexcept;
@@ -31,4 +31,4 @@ namespace CLI {
 
 
 
-#endif //CLI_HELPER_H
+#endif // CLI_ARGS_HELPER_H

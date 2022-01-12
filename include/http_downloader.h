@@ -66,24 +66,18 @@ namespace Downloaders
 			return response;
 		}
 
-		std::optional<std::size_t> GetBytesToRead() const noexcept
+		std::optional<std::tuple<std::size_t, std::size_t>> GetProgress() const noexcept
 		{
-			if(m_pSocket == nullptr)
+			if(!m_pSocket)
 			{
 				return std::nullopt;
 			}
 
-			return m_pSocket->GetBytesToRead();
-		}
-
-		std::optional<std::size_t> GetReadBytes() const noexcept
-		{
-			if(m_pSocket == nullptr)
+			if(auto readBytes = m_pSocket->GetReadBytes() ; auto bytesToDownload = m_pSocket->GetBytesToRead())
 			{
-				return std::nullopt;
+				return std::make_tuple(*readBytes, *bytesToDownload);
 			}
-
-			return m_pSocket->GetReadBytes();
+			return std::nullopt;
 		}
 
 	private:

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "cli_helper.h"
+#include "cli_args_helper.h"
 
 TEST(CliHelperTests, AllArgumentsTest)
 {
@@ -13,7 +13,7 @@ TEST(CliHelperTests, AllArgumentsTest)
 		"some_random_file.html"
 	};
 	
-	const CLI::CCLIHelper cParameters{iArgumentsCount, cszArgs};
+	const CLI::CCLIArgsHelper cParameters{iArgumentsCount, cszArgs};
 
 	ASSERT_STREQ(cParameters.GetName().c_str(), cszArgs[0]);
 
@@ -36,7 +36,7 @@ TEST(CliHelperTests, PartialArgumentsTest)
 		"--force",
 	};
 
-	const CLI::CCLIHelper cParameters{iArgumentsCount, cszArgs};
+	const CLI::CCLIArgsHelper cParameters{iArgumentsCount, cszArgs};
 
 	ASSERT_STREQ(cParameters.GetName().c_str(), cszArgs[0]);
 
@@ -54,7 +54,7 @@ TEST(CliHelperTests, FailTest)
 	const int iArgumentsCount = 0;
 	const char *cszArgs[] = {nullptr};
 
-	const CLI::CCLIHelper cParameters{iArgumentsCount, cszArgs};
+	const CLI::CCLIArgsHelper cParameters{iArgumentsCount, cszArgs};
 
 	ASSERT_FALSE(cParameters.CheckIfParameterExist("force"));
 	ASSERT_EQ(cParameters.GetParameterValue("force"), std::nullopt);

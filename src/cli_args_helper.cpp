@@ -1,8 +1,8 @@
 #include <stdexcept>
 
-#include "cli_helper.h"
+#include "cli_args_helper.h"
 
-CLI::CCLIHelper::CCLIHelper(int iArgc, const char *const cszArgv[])
+CLI::CCLIArgsHelper::CCLIArgsHelper(int iArgc, const char *const cszArgv[])
 {
 
 	if(iArgc <= 0 || cszArgv == nullptr)
@@ -44,13 +44,13 @@ CLI::CCLIHelper::CCLIHelper(int iArgc, const char *const cszArgv[])
 
 }
 
-bool CLI::CCLIHelper::CheckIfParameterExist(const std::string& csParameterToCheck) const noexcept
+bool CLI::CCLIArgsHelper::CheckIfParameterExist(const std::string& csParameterToCheck) const noexcept
 {
 	// Trying to extract value
 	return m_parameters.find(csParameterToCheck) != m_parameters.end();
 }
 
-std::optional<std::string> CLI::CCLIHelper::GetParameterValue(const std::string &csParameterToGet) const noexcept
+std::optional<std::string> CLI::CCLIArgsHelper::GetParameterValue(const std::string &csParameterToGet) const noexcept
 {
 	// Trying to extract value
 	if(auto foundValue = m_parameters.find(csParameterToGet); 

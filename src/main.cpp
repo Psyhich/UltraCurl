@@ -1,3 +1,5 @@
+#include <chrono>
+#include <thread>
 #include <unistd.h>
 
 #include <iostream>
@@ -6,7 +8,8 @@
 #include <string>
 #include <sstream>
 
-#include "cli_helper.h"
+#include "cli_args_helper.h"
+#include "cli_progres.h"
 #include "base_functionality.h"
 
 constexpr const char* HELP_MESSAGE =
@@ -19,10 +22,10 @@ constexpr const char* HELP_MESSAGE =
 void PrintUsage(const std::string &name);
 
 bool GetStreams(std::istream *&pInputStream, std::ostream *&pOutputStream, 
-	const CLI::CCLIHelper &cParameters) noexcept;
+	const CLI::CCLIArgsHelper &cParameters) noexcept;
 
 int main(int iArgc, char *argv[]) {
-	const CLI::CCLIHelper cParamaters{iArgc, argv};
+	const CLI::CCLIArgsHelper cParamaters{iArgc, argv};
 
 	std::istream *pInputStream{nullptr};
 	std::ostream *pOutputStream{nullptr};
@@ -54,7 +57,18 @@ int main(int iArgc, char *argv[]) {
 		const bool cbShouldOverwrite = 
 			cParamaters.CheckIfParameterExist("f") || cParamaters.CheckIfParameterExist("force");
 
-		APIFunctionality::WriteIntoFiles(pInputStream, cbShouldOverwrite, uCountOfThreads);
+		APIFunctionality::ConcurrentDownloaders *downloaders = 
+			APIFunctionality::WriteIntoFiles(pInputStream, cbShouldOverwrite, uCountOfThreads);
+
+		auto progressData = downloaders->GetDownloadProgres();
+		printf("Pool recieved!\n");
+		while(!progressData.empty())
+		{
+			printf("Doing work...\n");
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+			progressData = downloaders->GetDownloadProgres();
+		}
+
 	}
 	else
 	{
@@ -73,7 +87,7 @@ int main(int iArgc, char *argv[]) {
 }
 
 bool GetStreams(std::istream *&pInputStream, std::ostream *&pOutputStream, 
-	const CLI::CCLIHelper &cParameters) noexcept
+	const CLI::CCLIArgsHelper &cParameters) noexcept
 {
 	// Checking if input is being piped
 	if(isatty(fileno(stdin)))

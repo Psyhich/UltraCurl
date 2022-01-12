@@ -5,12 +5,17 @@
 #include <ostream>
 #include <optional>
 
+#include "sockets.h"
 #include "uri.h"
+#include "downloader_pool.h"
 
 namespace APIFunctionality
 {
+	using ConcurrentDownloaders = Downloaders::Concurrency::CConcurrentDownloader<Sockets::CTcpSocket>;
+
 	/// Function to concurrently download all specified links and store them in files
-	void WriteIntoFiles(std::istream *const cpInputStream, const bool cbOverwrite, unsigned uCountOfThreads) noexcept;
+	/// After all links have been added it returns DownloaderPool object for further operations
+	ConcurrentDownloaders* WriteIntoFiles(std::istream *const cpInputStream, const bool cbOverwrite, unsigned uCountOfThreads) noexcept;
 
 	/// Function to sequentialy download given files and output them into given stream
 	void WriteIntoStream(std::istream *const cpInputStream, std::ostream *const cpOutputStream) noexcept;
