@@ -10,8 +10,9 @@
 
 using HTTPTcpDownloader = Downloaders::CHTTPDownloader<Sockets::CTcpSocket>;
 
-APIFunctionality::ConcurrentDownloaders* APIFunctionality::WriteIntoFiles(
-	std::istream *const cpInputStream, const bool cbOverwrite, unsigned uCountOfThreads) noexcept
+APIFunctionality::ConcurrentDownloaders* APIFunctionality::WriteIntoFiles( std::istream *const cpInputStream, 
+	const bool cbOverwrite, unsigned uCountOfThreads, 
+	FDownloadCallback fDownloadCallback) noexcept
 {
 	ConcurrentDownloaders *downloaderPool;
 	// If we specify 0 threads, using default value for pool
@@ -55,19 +56,17 @@ APIFunctionality::ConcurrentDownloaders* APIFunctionality::WriteIntoFiles(
 		// Downloading data
 		downloaderPool->AddNewTask(pageURI, 
 		// Callback for completed download
-		[pFile = pFileToWriteInto, sFileName, sLine](std::optional<HTTP::CHTTPResponse> &&cResponse)
+		[pFileToWriteInto, sFileName, sLine, fDownloadCallback]
+		(std::optional<HTTP::CHTTPResponse> &&cResponse)
 		{
 			// We don't check for success codes to make user know about any other server states
 			if(cResponse)
 			{
-				pFile->write(cResponse->GetData().data(), cResponse->GetData().size());
-				printf("Saved: %s\n", sFileName.c_str());
+				pFileToWriteInto->write(cResponse->GetData().data(), cResponse->GetData().size());
 			}
-			else
-			{
-				printf("Failed to download from: %s\n", sLine.c_str());
-			}
-			delete pFile;
+
+			fDownloadCallback(CURI(sLine), cResponse);
+			delete pFileToWriteInto;
 			return false;
 		});
 

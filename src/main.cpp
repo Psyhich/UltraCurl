@@ -11,6 +11,7 @@
 #include "cli_args_helper.h"
 #include "cli_progres.h"
 #include "base_functionality.h"
+#include "response.h"
 
 constexpr const char* HELP_MESSAGE =
 "Usage:\n"
@@ -58,17 +59,29 @@ int main(int iArgc, char *argv[]) {
 			cParamaters.CheckIfParameterExist("f") || cParamaters.CheckIfParameterExist("force");
 
 		APIFunctionality::ConcurrentDownloaders *downloaders = 
-			APIFunctionality::WriteIntoFiles(pInputStream, cbShouldOverwrite, uCountOfThreads);
+			APIFunctionality::WriteIntoFiles(pInputStream, cbShouldOverwrite, uCountOfThreads, 
+			[](const CURI &cURI, std::optional<HTTP::CHTTPResponse> cResponse)
+			{
+				if(cResponse)
+				{
+					printf("Saved %s\n", cURI.GetFullURI().c_str());
+				}
+				else
+				{
+					printf("Failed to download %s\n", cURI.GetFullURI().c_str());
+				}
+			});
 
-		auto progressData = downloaders->GetDownloadProgres();
-		printf("Pool recieved!\n");
+		std::map<CURI, std::tuple<std::size_t, std::size_t>> progressData = 
+			downloaders->GetDownloadProgres();
 		while(!progressData.empty())
 		{
-			printf("Doing work...\n");
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			progressData = downloaders->GetDownloadProgres();
 		}
 
+		printf("Finished work\n");
+		delete downloaders;
 	}
 	else
 	{

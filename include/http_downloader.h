@@ -73,7 +73,8 @@ namespace Downloaders
 				return std::nullopt;
 			}
 
-			if(auto readBytes = m_pSocket->GetReadBytes() ; auto bytesToDownload = m_pSocket->GetBytesToRead())
+			if(auto readBytes = m_pSocket->GetReadBytes() ; 
+				auto bytesToDownload = m_pSocket->GetBytesToRead())
 			{
 				return std::make_tuple(*readBytes, *bytesToDownload);
 			}

@@ -17,6 +17,13 @@
 
 namespace Downloaders::Concurrency
 {
+	// Utility class to make CConcurrentDownloader destrutible
+	class IDisposable
+	{
+	public:
+		virtual ~IDisposable(){}
+	};
+
 	/// Callback that should accept HTTP response and should specify if download should be repeated
 	using FDownloadCallback = 
 		std::function<bool(std::optional<HTTP::CHTTPResponse>&&)>;
@@ -26,7 +33,7 @@ namespace Downloaders::Concurrency
 	/// After each download running callback function with passed response
 	/// Allows its own creation only on heap
 	template<class SocketClass>
-	class CConcurrentDownloader
+	class CConcurrentDownloader : public IDisposable
 	{
 	static_assert(std::is_base_of<Sockets::CSocket, SocketClass>(), "SocketClass should inherit CSocket");
 	private:
@@ -111,13 +118,18 @@ namespace Downloaders::Concurrency
 		{
 			*m_bCanAddNewTasks = false;
 
-			std::scoped_lock<std::mutex> queueLock(*m_uriQueueLock);
-			for(auto &[uID, worker] : *m_runningDownloads)
+			// Waiting till queue is empy
+			while(!m_urisToDownload->empty())
+			{
+
+			}
+
+			for(auto &pair : *m_runningDownloads)
 			{
 				std::scoped_lock<std::mutex> downloadsLock{*m_runningDownloadsLock};
-				if(worker.m_runningThread.joinable())
+				if(pair.second.m_runningThread.joinable())
 				{
-					worker.m_runningThread.join();
+					pair.second.m_runningThread.join();
 				}
 			}
 		}
@@ -125,7 +137,6 @@ namespace Downloaders::Concurrency
 		std::map<CURI, std::tuple<std::size_t, std::size_t>> GetDownloadProgres()
 		{
 			std::scoped_lock<std::mutex> downloadLock{ *m_runningDownloadsLock };
-			printf("Got lock and gathering info\n");
 
 			std::map<CURI, std::tuple<std::size_t, std::size_t>> progressData;
 			for(auto &[ID, worker] : *m_runningDownloads)
@@ -136,11 +147,8 @@ namespace Downloaders::Concurrency
 				}
 			}
 
-			printf("Lock released\n");
 			return progressData;
 		}
-	private:
-		// Destructor moved to private section to prevent allocation on stack
 		~CConcurrentDownloader() noexcept
 		{
 			// Setting stop flag if we can do that
@@ -173,10 +181,10 @@ namespace Downloaders::Concurrency
 
 			DealocateResources();
 		}
+	private:
 		void MoveData(CConcurrentDownloader &&downloaderToMove) noexcept
 		{
 				//JoinTasksCompletion();
-				printf("Move called\n");
 
 				std::scoped_lock<std::mutex> downloadsLock {*downloaderToMove.m_runningDownloadsLock};
 				std::scoped_lock<std::mutex> queueLock {*downloaderToMove.m_uriQueueLock};
@@ -213,20 +221,19 @@ namespace Downloaders::Concurrency
 			delete m_runningDownloads;
 		}
 
-		void DownloadTask(std::pair<std::size_t, WorkingTuple> &dataPair) noexcept
+		void DownloadTask(std::pair<std::size_t, WorkingTuple> *dataPair) noexcept
 		{
 			std::optional<HTTP::CHTTPResponse> gotData;
 			do
 			{
-				gotData = dataPair.second.m_downloader.Download(dataPair.second.m_URIToDownload);
+				gotData = dataPair->second.m_downloader.Download(dataPair->second.m_URIToDownload);
 			}
-			while(dataPair.second.m_fCallback(std::move(gotData)) && !m_bShouldStop);
-			printf("Finished work at %p\n", (void*)this);
+			while(dataPair->second.m_fCallback(std::move(gotData)) && !m_bShouldStop);
 
 			// If we already stoping execution, we don't need to remove task here
 			if(!*m_bShouldStop)
 			{
-				DeleteTaskByID(dataPair.first);
+				DeleteTaskByID(dataPair->first);
 
 				// Loading new values into map
 				LoadQueueIntoDownloads();
@@ -235,37 +242,20 @@ namespace Downloaders::Concurrency
 
 		void DeleteTaskByID(std::size_t nIndex) noexcept
 		{
-			if(!*m_bCanAddNewTasks)
-			{
-				return;
-			}
-
 			std::scoped_lock<std::mutex> downloadsLock{*m_runningDownloadsLock};
-			printf("Begun search at %p\n", (void*)this);
 			auto foundID = std::find_if(m_runningDownloads->begin(), 
 				m_runningDownloads->end(), 
 				[nIndex](const auto &pair) -> bool {
 					return pair.first == nIndex;
 				});
 
-			auto end = m_runningDownloads->end();
-			if(end != foundID)
-			{
-				m_runningDownloads->erase(foundID);
-				printf("Not found\n");
-			}
-
-			printf("Erased\n");
+			// Detaching current thread because it will be deleted in next line
+			foundID->second.m_runningThread.detach();
+			m_runningDownloads->erase(foundID);
 		}
 
 		void LoadQueueIntoDownloads() noexcept
 		{
-			if(!*m_bCanAddNewTasks)
-			{
-				return;
-			}
-
-			printf("Loading into tasks at %p\n", (void *)this);
 			std::scoped_lock<std::mutex> downloadsLock(*m_runningDownloadsLock);
 			std::scoped_lock<std::mutex> queueLock(*m_uriQueueLock);
 
@@ -276,8 +266,7 @@ namespace Downloaders::Concurrency
 				std::pair<std::size_t, WorkingTuple> &queuePair = std::ref(m_runningDownloads->back());
 
 				queuePair.second.m_runningThread = 
-					std::thread(&Concurrency::CConcurrentDownloader<SocketClass>::DownloadTask, this, std::ref(queuePair));
-
+					std::thread(&Concurrency::CConcurrentDownloader<SocketClass>::DownloadTask, this, &queuePair);
 			}
 		}
 	private:
