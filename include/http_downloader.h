@@ -202,7 +202,7 @@ namespace Downloaders
 				return false;
 			}
 
-			response.LoadData(*possiblyReadData);
+			response.LoadData(std::move(*possiblyReadData));
 
 			return true;
 		}

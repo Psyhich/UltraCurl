@@ -137,6 +137,11 @@ void HTTP::CHTTPResponse::LoadData(std::size_t &nIndex,
 	}
 }
 
+void HTTP::CHTTPResponse::LoadData(std::vector<char> &&dataToLoad) noexcept
+{
+	m_data = std::move(dataToLoad);
+}
+
 bool HTTP::CHTTPResponse::LoadAll(const std::vector<char> &cDataToParse) noexcept
 {
 	std::size_t nCurrentIndex = 0;
@@ -167,10 +172,4 @@ bool HTTP::CHTTPResponse::LoadHeaders(const std::vector<char> &cDataToParse) noe
 		return false;
 	}
 	return LoadHeaders(nCurrentIndex, cDataToParse);
-}
-
-void HTTP::CHTTPResponse::LoadData(const std::vector<char> &cDataToLoad) noexcept
-{
-	std::size_t nIndex = 0;
-	LoadData(nIndex, cDataToLoad);
 }

@@ -1,7 +1,7 @@
-#include <chrono>
-#include <thread>
 #include <unistd.h>
 
+#include <chrono>
+#include <thread>
 #include <iostream>
 #include <istream>
 #include <fstream>
@@ -58,30 +58,23 @@ int main(int iArgc, char *argv[]) {
 		const bool cbShouldOverwrite = 
 			cParamaters.CheckIfParameterExist("f") || cParamaters.CheckIfParameterExist("force");
 
-		APIFunctionality::ConcurrentDownloaders *downloaders = 
+		APIFunctionality::ConcurrentDownloaders downloaders = 
 			APIFunctionality::WriteIntoFiles(pInputStream, cbShouldOverwrite, uCountOfThreads, 
-			[](const CURI &cURI, std::optional<HTTP::CHTTPResponse> cResponse)
-			{
-				if(cResponse)
-				{
-					printf("Saved %s\n", cURI.GetFullURI().c_str());
-				}
-				else
-				{
-					printf("Failed to download %s\n", cURI.GetFullURI().c_str());
-				}
-			});
+			[](const CURI &, std::optional<HTTP::CHTTPResponse>) {});
 
-		std::map<CURI, std::tuple<std::size_t, std::size_t>> progressData = 
-			downloaders->GetDownloadProgres();
-		while(!progressData.empty())
+		std::multimap<CURI, std::tuple<std::size_t, std::size_t>> progressData = 
+			downloaders.GetDownloadProgres();
+
+		CLI::CCLIProgressPrinter progessPrinter;
+		while(!downloaders.IsDone())
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			progressData = downloaders->GetDownloadProgres();
-		}
+			progessPrinter.PrintHelp();
+			progessPrinter.PrintProgress(progressData);
 
-		printf("Finished work\n");
-		delete downloaders;
+			progessPrinter.Refresh();
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			progressData = downloaders.GetDownloadProgres();
+		}
 	}
 	else
 	{

@@ -44,7 +44,7 @@ namespace HTTP
 		/*
 		* Loads data to response body
 		*/
-		void LoadData(const std::vector<char> &cDataToLoad) noexcept;
+		void LoadData(std::vector<char> &&dataToLoad) noexcept;
 
 	private:
 		bool LoadStatusLine(std::size_t &nIndex, const std::vector<char> &cDataToParse) noexcept;

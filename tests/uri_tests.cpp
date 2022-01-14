@@ -4,6 +4,8 @@
 
 #include "uri.h"
 
+// TODO: DONT'T FORGET TO ADD TESTS FOR HEX ENCODING OF PATH AND QUERY!!!!!!!!!!!!!!!!!!!
+
 TEST(URIParsingTest, AddressParsingTest)
 {
 	std::string address = "blob://some.random.address.com:8999/path/to/file.txt?q=Text#sample";

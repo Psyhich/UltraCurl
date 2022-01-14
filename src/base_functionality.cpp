@@ -10,19 +10,19 @@
 
 using HTTPTcpDownloader = Downloaders::CHTTPDownloader<Sockets::CTcpSocket>;
 
-APIFunctionality::ConcurrentDownloaders* APIFunctionality::WriteIntoFiles( std::istream *const cpInputStream, 
+APIFunctionality::ConcurrentDownloaders APIFunctionality::WriteIntoFiles( std::istream *const cpInputStream, 
 	const bool cbOverwrite, unsigned uCountOfThreads, 
 	FDownloadCallback fDownloadCallback) noexcept
 {
-	ConcurrentDownloaders *downloaderPool;
+	ConcurrentDownloaders downloaderPool;
 	// If we specify 0 threads, using default value for pool
 	if(uCountOfThreads == 0)
 	{
-		downloaderPool = new ConcurrentDownloaders();
+		downloaderPool = ConcurrentDownloaders();
 	}
 	else
 	{
-		downloaderPool = new ConcurrentDownloaders(uCountOfThreads);
+		downloaderPool = ConcurrentDownloaders(uCountOfThreads);
 	}
 
 	// Now reading the stream and after each \n downloading the file from URI
@@ -54,7 +54,7 @@ APIFunctionality::ConcurrentDownloaders* APIFunctionality::WriteIntoFiles( std::
 		}
 		
 		// Downloading data
-		downloaderPool->AddNewTask(pageURI, 
+		downloaderPool.AddNewTask(pageURI, 
 		// Callback for completed download
 		[pFileToWriteInto, sFileName, sLine, fDownloadCallback]
 		(std::optional<HTTP::CHTTPResponse> &&cResponse)

@@ -60,7 +60,7 @@ TEST_F(ResponseTests, PartialLoadingTest)
 
 	ASSERT_EQ(parsedResponse.GetHeaders(), cRightHeaders);
 
-	parsedResponse.LoadData(cResponseData);
+	parsedResponse.LoadData(std::vector(cResponseData));
 	ASSERT_EQ(parsedResponse.GetData(), cResponseData);
 }
 

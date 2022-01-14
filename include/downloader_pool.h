@@ -134,11 +134,15 @@ namespace Downloaders::Concurrency
 			}
 		}
 
-		std::map<CURI, std::tuple<std::size_t, std::size_t>> GetDownloadProgres()
+		bool IsDone() const noexcept
+		{
+			return m_runningDownloads->empty() && m_urisToDownload->empty();
+		}
+
+		std::multimap<CURI, std::tuple<std::size_t, std::size_t>> GetDownloadProgres()
 		{
 			std::scoped_lock<std::mutex> downloadLock{ *m_runningDownloadsLock };
-
-			std::map<CURI, std::tuple<std::size_t, std::size_t>> progressData;
+			std::multimap<CURI, std::tuple<std::size_t, std::size_t>> progressData;
 			for(auto &[ID, worker] : *m_runningDownloads)
 			{
 				if(auto bytesProgress = worker.m_downloader.GetProgress())
