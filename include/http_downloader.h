@@ -117,11 +117,11 @@ namespace Downloaders
 			// Adding query and fragment to path
 			if(const auto csQuery = cURI.GetQuery())
 			{
-				sPath += *csQuery;
+				sPath += '?' + *csQuery;
 			}
 			if(const auto csFragment = cURI.GetFragment())
 			{
-				sPath += *csFragment;
+				sPath += '#' + *csFragment;
 			}
 
 			std::string sRequest = "GET " + sPath + " HTTP/1.1\r\n";

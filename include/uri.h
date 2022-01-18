@@ -33,6 +33,10 @@ private:
 			chCharToCheck == '-';
 	}
 private:
+	static const constexpr std::array<char, 4> POSSIBLE_ADDRESS_END{':', '#', '?', '/'};
+	static const constexpr std::array<char, 3> POSSIBLE_PORT_END{'#', '?', '/'};
+	static const constexpr std::array<char, 2> POSSIBLE_PATH_END{'#', '?'};
+	static const std::string sProtocolSeparator;
 	std::string m_originalString;
 };
 
