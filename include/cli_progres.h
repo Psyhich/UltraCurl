@@ -26,7 +26,7 @@ namespace CLI
 		std::size_t m_nCycleProgress{0};
 
 		const constexpr static std::size_t CYCLE_LIMIT{5000};
-		const constexpr static std::size_t SIZE_OF_URI_CELL = 11;
+		const constexpr static std::size_t SIZE_OF_URI_CELL{11};
 		const constexpr static std::array<char, 5> UNITS{ 'T', 'G', 'M', 'K', 'B' };
 		const constexpr static std::array<double, 5> UNITS_BYTES { 1099511627776, 1073741824, 1048576, 1024, 1 };
 	};

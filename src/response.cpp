@@ -52,8 +52,8 @@ bool HTTP::CHTTPResponse::LoadHeaders(std::size_t &nIndex, const std::vector<cha
 	bool bIsNewLine{false};
 	bool bIsReadingValue{false};
 
-	std::string sReadKey{""};
-	std::string sReadValue{""};
+	std::string sReadKey;
+	std::string sReadValue;
 
 	// Should split key and value with :
 	for(; nIndex <= cDataToParse.size() - 2; nIndex++)
