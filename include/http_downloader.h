@@ -106,16 +106,25 @@ namespace Downloaders
 			
 			// Forming request
 			// Getting path
-			std::string path;
+			std::string sPath;
 			if(const auto uriPath = cURI.GetPath())
 			{
-				path = std::move(*uriPath);
+				sPath = std::move(*uriPath);
 			} else
 			{
-				path = "/";
+				sPath = "/";
+			}
+			// Adding query and fragment to path
+			if(const auto csQuery = cURI.GetQuery())
+			{
+				sPath += *csQuery;
+			}
+			if(const auto csFragment = cURI.GetFragment())
+			{
+				sPath += *csFragment;
 			}
 
-			std::string sRequest = "GET " + path + " HTTP/1.1\r\n";
+			std::string sRequest = "GET " + sPath + " HTTP/1.1\r\n";
 			// Adding headers
 			AddHeaders(headers, sRequest);
 			sRequest += "\r\n";
