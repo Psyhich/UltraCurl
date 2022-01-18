@@ -16,7 +16,12 @@ namespace Sockets
 	class CSocket 
 	{
 	public:
-		explicit CSocket(const std::string& csAddressToUse);
+		explicit CSocket()
+		{
+
+		}
+
+		virtual bool Connect(const CURI& cURIToConnect) noexcept = 0;
 
 		virtual std::optional<std::vector<char>> ReadTill(const std::string &csStringToReadTill) noexcept = 0;
 		virtual std::optional<std::vector<char>> ReadCount(size_t nCountToRead) noexcept = 0;
@@ -36,19 +41,16 @@ namespace Sockets
 		}
 
 	protected:
-		inline const CURI& GetAddress() const noexcept { return m_address; }
 		// Progress bytes are optional because not all 
 		// sockets can deduce how much data they would need to download
-		std::optional<size_t> m_nBytesToRead;
-		std::optional<size_t> m_nReadBytes;
-	private:
-		CURI m_address;
+		std::optional<size_t> m_nBytesToRead{std::nullopt};
+		std::optional<size_t> m_nReadBytes{std::nullopt};
 	};
 
 	class CTcpSocket : public CSocket
 	{
 	public:
-		explicit CTcpSocket(const std::string& csAddressToUse);
+		explicit CTcpSocket();
 		~CTcpSocket() override;
 
 		CTcpSocket(const CTcpSocket &cSocketToCopy) = delete;
@@ -56,6 +58,9 @@ namespace Sockets
 
 		CTcpSocket(CTcpSocket &&socketToMove);
 		CTcpSocket& operator =(CTcpSocket &&socketToMove);
+
+		bool Connect(const CURI &cURIToConnect) noexcept override;
+
 		// IO operations
 
 		/// Reads till some specified string including that string
@@ -73,16 +78,15 @@ namespace Sockets
 		bool Write(const char* pcchBytes, size_t nCount) noexcept override;
 	private:
 		/// Returns port in network byte order
-		std::optional<uint16_t> ExtractPortInByteOrder() const noexcept;
-		std::optional<sockaddr> GetSocketAddress() const noexcept;
+		static std::optional<uint16_t> ExtractPortInByteOrder(const CURI &cURIToGetAddress) noexcept;
+		static std::optional<sockaddr> GetSocketAddress(const CURI &cURIToGetPort) noexcept;
+		void MoveData(CTcpSocket &&socketToMove) noexcept;
+	private:
+		int m_iSocketFD{-1};
 
 		static const constexpr char *HTTP_SERVICE = "80";
 		static const constexpr size_t BUFFER_SIZE = 4096;
-	private:
-		int m_iSocketFD{-1};
 	};
-
-
 
 } // Sockets 
 

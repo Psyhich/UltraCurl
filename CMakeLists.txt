@@ -69,6 +69,7 @@ target_link_libraries(ultra_curlcli ${PROJECT_NAME})
 add_executable(tests ${TESTS})
 target_link_libraries( tests
 	gtest # For basic library usage
+	gmock
 	gtest_main # For tests to be runned(this rung RUN_ALL_TESTS())
 	rt # Needed for gtest
 	pthread # Needed for gtest

@@ -16,11 +16,14 @@ public:
 		return m_originalString;
 	}
 	std::optional<std::string> GetProtocol() const noexcept;
+	std::optional<int> GetPort() const noexcept;
 	std::optional<std::string> GetPureAddress() const noexcept;
 	std::optional<std::filesystem::path> GetPath() const noexcept;
-	std::optional<int> GetPort() const noexcept;
+	std::optional<std::string> GetQuery() const noexcept;
+	std::optional<std::string> GetFragment() const noexcept;
 
 	friend bool operator<(const CURI& cLURIToCompare, const CURI &cRURIToCompare) noexcept;
+	friend bool operator==(const CURI& cLURIToCompare, const CURI &cRURIToCompare) noexcept;
 private:
 	static inline bool CanBeUsedInProtocol(char chCharToCheck) noexcept
 	{

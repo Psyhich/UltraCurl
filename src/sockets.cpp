@@ -11,23 +11,19 @@
 
 #include "sockets.h"
 
-Sockets::CSocket::CSocket::CSocket(const std::string &addressToUse) : 
-	m_address{addressToUse} 
-{
-}
 
-std::optional<uint16_t> Sockets::CTcpSocket::ExtractPortInByteOrder() const noexcept
+std::optional<uint16_t> Sockets::CTcpSocket::ExtractPortInByteOrder(const CURI &cURIToGetPort) noexcept
 {
-	if(const auto cPort = GetAddress().GetPort())
+	if(const auto cPort = cURIToGetPort.GetPort())
 	{
 		return htons(*cPort);
 	}
 	return htons(80);
 }
 
-std::optional<sockaddr> Sockets::CTcpSocket::GetSocketAddress() const noexcept
+std::optional<sockaddr> Sockets::CTcpSocket::GetSocketAddress(const CURI& cURIToGetAddress) noexcept
 {
-	if(const auto cAddress = GetAddress().GetPureAddress())
+	if(const auto cAddress = cURIToGetAddress.GetPureAddress())
 	{
 		// Setting hint to look for host(protocol, socket type and IPv4)
 		addrinfo addressHint;
@@ -51,27 +47,65 @@ std::optional<sockaddr> Sockets::CTcpSocket::GetSocketAddress() const noexcept
 	return std::nullopt;
 }
 
+void Sockets::CTcpSocket::MoveData(CTcpSocket &&socketToMove) noexcept
+{
+	m_nBytesToRead = socketToMove.m_nBytesToRead;
+	m_nReadBytes = socketToMove.m_nReadBytes;
+	m_iSocketFD = socketToMove.m_iSocketFD;
 
-Sockets::CTcpSocket::CTcpSocket(
-	const std::string& addressToUse) : CSocket(addressToUse)
+	socketToMove.m_nBytesToRead = std::nullopt;
+	socketToMove.m_nReadBytes = std::nullopt;
+	socketToMove.m_iSocketFD = -1;
+}
+
+
+Sockets::CTcpSocket::CTcpSocket()
+{
+}
+
+Sockets::CTcpSocket::~CTcpSocket()
+{
+	if(m_iSocketFD != -1)
+	{
+		close(m_iSocketFD);
+	}
+}
+
+
+Sockets::CTcpSocket::CTcpSocket(CTcpSocket &&socketToMove)
+{
+	MoveData(std::move(socketToMove));
+}
+
+Sockets::CTcpSocket& Sockets::CTcpSocket::CTcpSocket::operator =(CTcpSocket &&socketToMove)
+{
+	if(this != &socketToMove)
+	{
+		MoveData(std::move(socketToMove));
+	}
+
+	return *this;
+}
+
+bool Sockets::CTcpSocket::Connect(const CURI &cURIToConnect) noexcept
 {
 	m_nReadBytes = 0;
 	m_nBytesToRead = 0;
 
 	// Getting address info to know which IP protocol to use
-	std::optional<sockaddr> cResolvedAddress = GetSocketAddress();
+	std::optional<sockaddr> cResolvedAddress = GetSocketAddress(cURIToConnect);
 	if(!cResolvedAddress)
 	{
 		fprintf(stderr, "Failed to resolve given address\n");
-		return;
+		return false;
 	}
 
-	std::optional<uint16_t> uiPort = ExtractPortInByteOrder();
+	std::optional<uint16_t> uiPort = ExtractPortInByteOrder(cURIToConnect);
 	// If we got wrongly written port returning nullopt
 	if(!uiPort)
 	{
 		fprintf(stderr, "Given port is invalid\n");
-		return;
+		return false;
 	}
 	
 	// Creating socket
@@ -79,7 +113,7 @@ Sockets::CTcpSocket::CTcpSocket(
 	if(m_iSocketFD == -1)
 	{
 		fprintf(stderr, "Failed to create socket\n");
-		return;
+		return false;
 	}
 
 	// Setting specified port for resolved address
@@ -91,36 +125,10 @@ Sockets::CTcpSocket::CTcpSocket(
 		fprintf(stderr, "Failed to connect to given address\n");
 		close(m_iSocketFD);
 		m_iSocketFD = -1;
-		return;
-	}
-}
-
-Sockets::CTcpSocket::~CTcpSocket()
-{
-	if(m_iSocketFD != -1)
-	{
-		close(m_iSocketFD);
-	}
-}
-
-Sockets::CTcpSocket::CTcpSocket(CTcpSocket &&socketToMove) : 
-	CSocket(socketToMove.GetAddress().GetFullURI())
-{
-	this->m_iSocketFD = socketToMove.m_iSocketFD;
-	socketToMove.m_iSocketFD = -1;
-}
-
-Sockets::CTcpSocket& Sockets::CTcpSocket::CTcpSocket::operator =(CTcpSocket &&socketToMove)
-{
-	if(this == &socketToMove)
-	{
-		return *this;
+		return false;
 	}
 
-	this->m_iSocketFD = socketToMove.m_iSocketFD;
-	socketToMove.m_iSocketFD = -1;
-
-	return *this;
+	return true;
 }
 
 std::optional<std::vector<char>> Sockets::CTcpSocket::ReadTillEnd() noexcept

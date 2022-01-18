@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <exception>
 #include <stdexcept>
 
@@ -9,36 +10,16 @@ CURI::CURI(const std::string& cStringToSet) : m_originalString{cStringToSet}
 
 std::optional<std::string> CURI::GetProtocol() const noexcept
 {
-	std::size_t nProtocolLength = 0;
-	// Looking for :// pattern
-	// Starting from 2 because length of :// pattern is 3
-	for(std::size_t nIndex = 2; nIndex < m_originalString.size(); nIndex++)
-	{
-		if(m_originalString[nIndex] == '/' && m_originalString[nIndex - 1] == '/' &&
-			m_originalString[nIndex - 2] == ':')
-		{
-			nProtocolLength = nIndex - 2;
-			break;
-		}
-	}
+	const std::size_t cnProtocolEnd = m_originalString.find("://");
 
-	if(nProtocolLength == 0)
+	if(cnProtocolEnd == std::string::npos ||
+		!std::all_of(m_originalString.begin(), m_originalString.begin() + cnProtocolEnd, 
+		CanBeUsedInProtocol))
 	{
 		return std::nullopt;
 	}
-	else 
-	{
 
-
-		for(std::size_t nIndex = 0; nIndex < nProtocolLength; nIndex++)
-		{
-			if(!CanBeUsedInProtocol(m_originalString[nIndex]))
-			{
-				return std::nullopt;
-			}
-		}
-		return m_originalString.substr(0, nProtocolLength);
-	}
+	return m_originalString.substr(0, cnProtocolEnd);
 }
 
 std::optional<std::string> CURI::GetPureAddress() const noexcept
@@ -187,8 +168,38 @@ std::optional<std::filesystem::path> CURI::GetPath() const noexcept
 		std::filesystem::path(m_originalString.substr(nPathStart, nPathEnd - nPathStart));
 }
 
+std::optional<std::string> CURI::GetQuery() const noexcept
+{
+	auto queryStart = std::find(m_originalString.begin(), m_originalString.end(), '?');
+
+	if(queryStart == m_originalString.end())
+	{
+		return std::nullopt;
+	}
+
+	auto queryEnd = std::find(queryStart, m_originalString.end(), '#');
+
+	return std::string{queryStart, queryEnd};
+}
+
+std::optional<std::string> CURI::GetFragment() const noexcept
+{
+	auto fragmentStart = std::find(m_originalString.begin(), m_originalString.end(), '#');
+
+	if(fragmentStart == m_originalString.end())
+	{
+		return std::nullopt;
+	}
+
+	return std::string{fragmentStart, m_originalString.end()};
+}
+
 
 bool operator<(const CURI& cLURIToCompare, const CURI &cRURIToCompare) noexcept
 {
 	return cLURIToCompare.m_originalString < cRURIToCompare.m_originalString;
+}
+bool operator==(const CURI& cLURIToCompare, const CURI &cRURIToCompare) noexcept
+{
+	return cLURIToCompare.m_originalString == cRURIToCompare.m_originalString;
 }

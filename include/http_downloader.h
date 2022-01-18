@@ -17,18 +17,27 @@ namespace Downloaders
 	///	Class responsible for downloading any given file 
 	///	using HTTP application protocol.
 	///	It can use any socket class that inherits CSocket
-	template<class SocketClass> class CHTTPDownloader
+	class CHTTPDownloader
 	{
+	using SocketClass = std::unique_ptr<Sockets::CSocket>;
 	public:
-		static_assert(std::is_base_of<Sockets::CSocket, SocketClass>::value, "Class should inherit CSocket");
+		CHTTPDownloader(SocketClass&& pSocketToUse) : 
+			m_pSocket{std::move(pSocketToUse)}
+		{
 
-		CHTTPDownloader() {}
+		}
 
 		std::optional<HTTP::CHTTPResponse> Download(const CURI &cURI)
 		{
 			std::optional<HTTP::CHTTPResponse> response{HTTP::CHTTPResponse()};
 			do
 			{
+				// Connecting to given address
+				if(!m_pSocket->Connect(cURI))
+				{
+					response = std::nullopt;
+					break;
+				}
 				// Firstly we should form request for some server and sent it
 				// After that we can read all data from socket and parse it as response 
 				const std::optional<std::string> csRequest = ConstructRequest(cURI);
@@ -38,7 +47,6 @@ namespace Downloaders
 					break;
 				}
 
-				m_pSocket = new SocketClass(cURI.GetFullURI());
 				// Sending request
 				if(!m_pSocket->Write(csRequest->data(), csRequest->size()))
 				{
@@ -58,11 +66,9 @@ namespace Downloaders
 					response = std::nullopt;
 					break;
 				}
-
 			} while(false);
 
-			delete m_pSocket;
-			m_pSocket = nullptr;
+			m_pSocket.reset(nullptr);
 			return response;
 		}
 
@@ -272,7 +278,7 @@ namespace Downloaders
 
 		}
 	private:
-		SocketClass *m_pSocket{nullptr};
+		SocketClass m_pSocket{nullptr};
 	};
 
 } // Downloaders
