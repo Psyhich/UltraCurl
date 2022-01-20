@@ -1,12 +1,12 @@
-#include <cstdio>
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <cstdio>
 #include <unistd.h>
+#include <stdio.h>
 
 #include <cstring>
-#include <stdio.h>
 #include <vector>
 
 #include "sockets.h"

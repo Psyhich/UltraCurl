@@ -2,7 +2,7 @@
 
 #include "response.h"
 
-bool HTTP::CHTTPResponse::LoadStatusLine(size_t &nIndex, 
+bool HTTP::CHTTPResponse::LoadStatusLine(std::size_t &nIndex, 
 	const std::vector<char> &cDataToParse) noexcept
 {
 	m_iCode = 0;
@@ -43,7 +43,7 @@ bool HTTP::CHTTPResponse::LoadStatusLine(size_t &nIndex,
 	return true;
 }
 
-bool HTTP::CHTTPResponse::LoadHeaders(size_t &nIndex, const std::vector<char> &cDataToParse) noexcept
+bool HTTP::CHTTPResponse::LoadHeaders(std::size_t &nIndex, const std::vector<char> &cDataToParse) noexcept
 {
 	m_headers.clear();
 
@@ -52,8 +52,8 @@ bool HTTP::CHTTPResponse::LoadHeaders(size_t &nIndex, const std::vector<char> &c
 	bool bIsNewLine{false};
 	bool bIsReadingValue{false};
 
-	std::string sReadKey;
-	std::string sReadValue;
+	std::string sReadKey{""};
+	std::string sReadValue{""};
 
 	// Should split key and value with :
 	for(; nIndex <= cDataToParse.size() - 2; nIndex++)
@@ -93,7 +93,7 @@ bool HTTP::CHTTPResponse::LoadHeaders(size_t &nIndex, const std::vector<char> &c
 				break;
 			}
 
-			m_headers[sReadKey] = std::move(sReadValue);
+			m_headers[sReadKey] = sReadValue;
 
 			sReadKey = "";
 			sReadValue = "";
@@ -121,7 +121,7 @@ bool HTTP::CHTTPResponse::LoadHeaders(size_t &nIndex, const std::vector<char> &c
 	return bIsFoundEnd;
 }
 
-void HTTP::CHTTPResponse::LoadData(size_t &nIndex, 
+void HTTP::CHTTPResponse::LoadData(std::size_t &nIndex, 
 	const std::vector<char> &cDataToLoad) noexcept
 {
 	m_data.clear();
@@ -137,9 +137,14 @@ void HTTP::CHTTPResponse::LoadData(size_t &nIndex,
 	}
 }
 
+void HTTP::CHTTPResponse::LoadData(std::vector<char> &&dataToLoad) noexcept
+{
+	m_data = std::move(dataToLoad);
+}
+
 bool HTTP::CHTTPResponse::LoadAll(const std::vector<char> &cDataToParse) noexcept
 {
-	size_t nCurrentIndex = 0;
+	std::size_t nCurrentIndex = 0;
 	
 	// Loading status line
 	if(!LoadStatusLine(nCurrentIndex, cDataToParse))
@@ -159,7 +164,7 @@ bool HTTP::CHTTPResponse::LoadAll(const std::vector<char> &cDataToParse) noexcep
 
 bool HTTP::CHTTPResponse::LoadHeaders(const std::vector<char> &cDataToParse) noexcept
 {
-	size_t nCurrentIndex = 0;
+	std::size_t nCurrentIndex = 0;
 
 	// Loading status line and if it wont fail loading headers
 	if(!LoadStatusLine(nCurrentIndex, cDataToParse))
@@ -167,10 +172,4 @@ bool HTTP::CHTTPResponse::LoadHeaders(const std::vector<char> &cDataToParse) noe
 		return false;
 	}
 	return LoadHeaders(nCurrentIndex, cDataToParse);
-}
-
-void HTTP::CHTTPResponse::LoadData(const std::vector<char> &cDataToLoad) noexcept
-{
-	size_t nIndex = 0;
-	LoadData(nIndex, cDataToLoad);
 }

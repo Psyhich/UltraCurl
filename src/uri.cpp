@@ -5,15 +5,14 @@
 
 CURI::CURI(const std::string& cStringToSet) : m_originalString{cStringToSet}
 {
-
 }
 
 std::optional<std::string> CURI::GetProtocol() const noexcept
 {
-	size_t nProtocolLength = 0;
+	std::size_t nProtocolLength = 0;
 	// Looking for :// pattern
 	// Starting from 2 because length of :// pattern is 3
-	for(size_t nIndex = 2; nIndex < m_originalString.size(); nIndex++)
+	for(std::size_t nIndex = 2; nIndex < m_originalString.size(); nIndex++)
 	{
 		if(m_originalString[nIndex] == '/' && m_originalString[nIndex - 1] == '/' &&
 			m_originalString[nIndex - 2] == ':')
@@ -31,7 +30,7 @@ std::optional<std::string> CURI::GetProtocol() const noexcept
 	{
 
 
-		for(size_t nIndex = 0; nIndex < nProtocolLength; nIndex++)
+		for(std::size_t nIndex = 0; nIndex < nProtocolLength; nIndex++)
 		{
 			if(!CanBeUsedInProtocol(m_originalString[nIndex]))
 			{
@@ -45,11 +44,11 @@ std::optional<std::string> CURI::GetProtocol() const noexcept
 std::optional<std::string> CURI::GetPureAddress() const noexcept
 {
 	// We should take in mind protocol and port, ideally address can end with / ? #
-	size_t nAddressStart = 0;
-	size_t nAddressEnd = 0;
+	std::size_t nAddressStart = 0;
+	std::size_t nAddressEnd = 0;
 	
 	// Checking for protocol start
-	for (size_t nIndex = 2; nIndex < m_originalString.size(); nIndex++) {
+	for (std::size_t nIndex = 2; nIndex < m_originalString.size(); nIndex++) {
 		const char &cchCurrentChar = m_originalString[nIndex];
 		if(cchCurrentChar == '/' && m_originalString[nIndex - 1] == '/' &&
 			m_originalString[nIndex - 2] == ':')
@@ -59,7 +58,7 @@ std::optional<std::string> CURI::GetPureAddress() const noexcept
 		}
 	}
 	// Checking for address end(: # ? / chars) adfter protocol(if found)
-	for(size_t nIndex = nAddressStart; nIndex < m_originalString.size() + 1; nIndex++)
+	for(std::size_t nIndex = nAddressStart; nIndex < m_originalString.size() + 1; nIndex++)
 	{
 		const char &cchCurrentChar = m_originalString.c_str()[nIndex];
 		if(cchCurrentChar == '/' || cchCurrentChar == '#' ||
@@ -83,12 +82,12 @@ std::optional<int> CURI::GetPort() const noexcept
 {
 	// Port specified between ':' and '#' '?' '/' chars
 	// Also we should omit protocol specifier ://
-	size_t nPortStartPos = 0;
-	size_t nPortEndPos = 0;
+	std::size_t nPortStartPos = 0;
+	std::size_t nPortEndPos = 0;
 
 	// Checking for port start and excluding protocol
 	// Creating only one loop would produce a lot of ifs
-	for (size_t nIndex = 0; nIndex < m_originalString.size(); nIndex++) {
+	for (std::size_t nIndex = 0; nIndex < m_originalString.size(); nIndex++) {
 		const char &cchCurrentChar = m_originalString[nIndex];
 		if(nIndex < m_originalString.size() - 4 && 
 			cchCurrentChar == ':' && 
@@ -107,7 +106,7 @@ std::optional<int> CURI::GetPort() const noexcept
 	}
 
 	// Now looking for port end
-	for(size_t nIndex = nPortStartPos; nIndex < m_originalString.size() + 1; nIndex++)
+	for(std::size_t nIndex = nPortStartPos; nIndex < m_originalString.size() + 1; nIndex++)
 	{
 		const char &cchCurrentChar = m_originalString.c_str()[nIndex];
 		if(cchCurrentChar == '/' || cchCurrentChar == '#' ||
@@ -141,8 +140,8 @@ std::optional<int> CURI::GetPort() const noexcept
 
 std::optional<std::filesystem::path> CURI::GetPath() const noexcept
 {
-	size_t nPathStart = 0;
-	for(size_t nIndex = 0; nIndex < m_originalString.size(); nIndex++)
+	std::size_t nPathStart = 0;
+	for(std::size_t nIndex = 0; nIndex < m_originalString.size(); nIndex++)
 	{
 		// We should take in mind that after protocol we also have ://
 		const char& cchCurrentChar = m_originalString[nIndex];
@@ -168,8 +167,8 @@ std::optional<std::filesystem::path> CURI::GetPath() const noexcept
 	}
 
 	// Looking for path end(\0 ? #)
-	size_t nPathEnd = 0;
-	for(size_t nIndex = nPathStart; nIndex < m_originalString.size() + 1; nIndex++)
+	std::size_t nPathEnd = 0;
+	for(std::size_t nIndex = nPathStart; nIndex < m_originalString.size() + 1; nIndex++)
 	{
 		const char& cchCurrentChar = m_originalString.c_str()[nIndex];
 		if(cchCurrentChar == '#' || cchCurrentChar == '?' || cchCurrentChar == '\0')
@@ -188,3 +187,8 @@ std::optional<std::filesystem::path> CURI::GetPath() const noexcept
 		std::filesystem::path(m_originalString.substr(nPathStart, nPathEnd - nPathStart));
 }
 
+
+bool operator<(const CURI& cLURIToCompare, const CURI &cRURIToCompare) noexcept
+{
+	return cLURIToCompare.m_originalString < cRURIToCompare.m_originalString;
+}

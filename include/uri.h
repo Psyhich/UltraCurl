@@ -19,6 +19,8 @@ public:
 	std::optional<std::string> GetPureAddress() const noexcept;
 	std::optional<std::filesystem::path> GetPath() const noexcept;
 	std::optional<int> GetPort() const noexcept;
+
+	friend bool operator<(const CURI& cLURIToCompare, const CURI &cRURIToCompare) noexcept;
 private:
 	static inline bool CanBeUsedInProtocol(char chCharToCheck) noexcept
 	{
@@ -30,5 +32,6 @@ private:
 private:
 	std::string m_originalString;
 };
+
 
 #endif // MY_URI_H

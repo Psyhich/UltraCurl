@@ -18,27 +18,30 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(SOURCES 
+	include/base_functionality.h src/base_functionality.cpp
 	include/http_downloader.h
-	include/sockets.h src/sockets.cpp 
+	include/downloader_pool.h
 	include/uri.h src/uri.cpp
 	include/response.h src/response.cpp
+	include/sockets.h src/sockets.cpp 
 )
 set(CLI_BUILD 
 	src/main.cpp
-	include/cli_helper.h src/cli_helper.cpp
+	include/cli_args_helper.h src/cli_args_helper.cpp
+	include/cli_progres.h src/cli_progres.cpp
 )
 set(TESTS 
 	tests/uri_tests.cpp
 	tests/cli_helper_tests.cpp
 	tests/response_tests.cpp
 	tests/downloader_tests.cpp
-	include/cli_helper.h src/cli_helper.cpp # adding files which need to be tested
+	include/cli_args_helper.h src/cli_args_helper.cpp # adding files which need to be tested
+	tests/test_socket.h tests/test_socket.cpp
 )
 
 # Setting flags for coverage test
 set(CMAKE_CXX_FLAGS_DEBUG " -g -O0 -fprofile-arcs -ftest-coverage ${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_DEBUG " -g -O0 -fprofile-arcs -ftest-coverage ${CMAKE_C_FLAGS_DEBUG}")
-#option(CodeCoverage "CodeCoverage" OFF)
 
 # Making all warnings errors and turning on pedantic feature in GCC
 if(MSVC)
@@ -54,6 +57,9 @@ add_subdirectory(lib/googletest)
 enable_testing()
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
+target_link_libraries(${PROJECT_NAME}
+	pthread
+)
 target_include_directories(${PROJECT_NAME} PUBLIC include/)
 
 add_executable(ultra_curlcli ${CLI_BUILD})
