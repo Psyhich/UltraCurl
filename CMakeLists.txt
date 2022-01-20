@@ -58,9 +58,12 @@ find_package(Threads REQUIRED)
 add_subdirectory(lib/googletest)
 enable_testing()
 
+add_subdirectory(lib/zstd/build/cmake)
+
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 target_link_libraries(${PROJECT_NAME}
 	pthread
+	libzstd_static
 )
 target_include_directories(${PROJECT_NAME} PUBLIC include/)
 
