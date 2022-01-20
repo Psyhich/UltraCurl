@@ -81,7 +81,7 @@ namespace Downloaders::Concurrency
 		void AddNewTask(const CURI &cURIToDownload, FDownloadCallback fCallback) noexcept
 		{
 			// We can't add new tasks if we already stoped processing
-			if(*m_pbShouldStop || !m_pbCanAddNewTaskss)
+			if(*m_pbShouldStop || !m_pbCanAddNewTasks)
 			{
 				return;
 			}
@@ -116,7 +116,7 @@ namespace Downloaders::Concurrency
 
 		bool IsDone() const noexcept
 		{
-			return m_pRunningDownloads->empty() &&m_pUrisToDownloadd->empty();
+			return m_pRunningDownloads->empty() &&m_pUrisToDownload->empty();
 		}
 
 		std::multimap<CURI, std::tuple<std::size_t, std::size_t>> GetDownloadProgres()
@@ -136,7 +136,7 @@ namespace Downloaders::Concurrency
 		~CConcurrentDownloader() noexcept
 		{
 			// Setting stop flag if we can do that
-			if(m_pbShouldStop &&m_pbCanAddNewTaskss)
+			if(m_pbShouldStop &&m_pbCanAddNewTasks)
 			{
 				*m_pbShouldStop = true;
 				*m_pbCanAddNewTasks = false;
@@ -248,7 +248,7 @@ namespace Downloaders::Concurrency
 			std::scoped_lock<std::mutex> downloadsLock(*m_pRunningDownloadsLock);
 			std::scoped_lock<std::mutex> queueLock(*m_pUriQueueLock);
 
-			while(m_pRunningDownloads->size() < m_uMaxCountOfThreads && m_pUrisToDownloadd->empty())
+			while(m_pRunningDownloads->size() < m_uMaxCountOfThreads && m_pUrisToDownload->empty())
 			{
 				auto [uri, callback] = std::move(m_pUrisToDownload->front());
 				m_pRunningDownloads->push_back(

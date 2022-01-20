@@ -82,10 +82,12 @@ namespace Sockets
 		static std::optional<sockaddr> GetSocketAddress(const CURI &cURIToGetPort) noexcept;
 		void MoveData(CTcpSocket &&socketToMove) noexcept;
 	private:
-		int m_iSocketFD{-1};
-
 		static const constexpr char *HTTP_SERVICE = "80";
 		static const constexpr size_t BUFFER_SIZE = 4096;
+
+		int m_iSocketFD{-1};
+		std::array<char, BUFFER_SIZE> m_buffer;
+		std::array<char, BUFFER_SIZE>::iterator m_nCurrentValidDataEnd{m_buffer.begin()};
 	};
 
 } // Sockets 
