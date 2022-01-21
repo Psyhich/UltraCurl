@@ -8,6 +8,7 @@
 #include <queue>
 #include <mutex>
 #include <vector>
+#include <atomic>
 #include <list>
 
 #include "sockets.h"
@@ -37,8 +38,8 @@ namespace Downloaders::Concurrency
 			m_pUriQueueLock{new std::mutex()},
 			m_pUrisToDownload(new std::queue<TaskNonExecuted>()),
 			m_uMaxCountOfThreads{uMaxCountOfThreads},
-			m_pbShouldStop{new bool(false)},
-			m_pbCanAddNewTasks{new bool(true)}
+			m_pbShouldStop{new std::atomic<bool>(false)},
+			m_pbCanAddNewTasks{new std::atomic<bool>(true)}
 		{
 
 		}
@@ -47,8 +48,8 @@ namespace Downloaders::Concurrency
 			m_pRunningDownloads{new std::list<TaskInProgress>()},
 			m_pUriQueueLock{new std::mutex()},
 			m_pUrisToDownload(new std::queue<TaskNonExecuted>()),
-			m_pbShouldStop{new bool(false)},
-			m_pbCanAddNewTasks{new bool(true)}
+			m_pbShouldStop{new std::atomic<bool>(false)},
+			m_pbCanAddNewTasks{new std::atomic<bool>(true)}
 		{
 			m_uMaxCountOfThreads = std::thread::hardware_concurrency();
 			// If hardware_concurrency() failed to determine count of hardware supported threads assuming constant number of them
@@ -95,7 +96,7 @@ namespace Downloaders::Concurrency
 
 		void JoinTasksCompletion() noexcept
 		{
-			*m_pbCanAddNewTasks = false;
+			m_pbCanAddNewTasks->store(false);
 
 			// Waiting till queue is empty
 			while(!m_pUrisToDownload->empty())
@@ -136,10 +137,10 @@ namespace Downloaders::Concurrency
 		~CConcurrentDownloader() noexcept
 		{
 			// Setting stop flag if we can do that
-			if(m_pbShouldStop &&m_pbCanAddNewTasks)
+			if(m_pbShouldStop && m_pbCanAddNewTasks)
 			{
-				*m_pbShouldStop = true;
-				*m_pbCanAddNewTasks = false;
+				m_pbShouldStop->store(true);
+				m_pbCanAddNewTasks->store(false);
 			}
 
 			// Clearing queue of URIs put for download
@@ -216,17 +217,19 @@ namespace Downloaders::Concurrency
 			while(fCallback(std::move(gotData)) && !m_pbShouldStop);
 
 			// If we already stoping execution, we don't need to remove task here
-			if(!*m_pbShouldStop)
-			{
-				DeleteTaskByID(std::this_thread::get_id());
+			DeleteTaskByID(std::this_thread::get_id());
 
-				// Loading new values into queue
-				LoadQueueIntoDownloads();
-			}
+			// Loading new values into queue
+			LoadQueueIntoDownloads();
 		}
 
 		void DeleteTaskByID(std::thread::id nThreadID) noexcept
 		{
+			if(!m_pbShouldStop->load())
+			{
+				return;
+			}
+
 			std::scoped_lock<std::mutex> downloadsLock{*m_pRunningDownloadsLock};
 			auto foundID = std::find_if(m_pRunningDownloads->begin(), 
 				m_pRunningDownloads->end(), 
@@ -245,10 +248,15 @@ namespace Downloaders::Concurrency
 
 		void LoadQueueIntoDownloads() noexcept
 		{
+			if(!m_pbShouldStop->load())
+			{
+				return;
+			}
+
 			std::scoped_lock<std::mutex> downloadsLock(*m_pRunningDownloadsLock);
 			std::scoped_lock<std::mutex> queueLock(*m_pUriQueueLock);
 
-			while(m_pRunningDownloads->size() < m_uMaxCountOfThreads && m_pUrisToDownload->empty())
+			while(m_pRunningDownloads->size() < m_uMaxCountOfThreads && !m_pUrisToDownload->empty())
 			{
 				auto [uri, callback] = std::move(m_pUrisToDownload->front());
 				m_pRunningDownloads->push_back(
@@ -273,8 +281,8 @@ namespace Downloaders::Concurrency
 		std::queue<TaskNonExecuted> *m_pUrisToDownload;
 
 		unsigned m_uMaxCountOfThreads;
-		bool *m_pbShouldStop{nullptr};
-		bool *m_pbCanAddNewTasks{nullptr};
+		std::atomic<bool> *m_pbShouldStop{nullptr};
+		std::atomic<bool> *m_pbCanAddNewTasks{nullptr};
 	};
 }
 
