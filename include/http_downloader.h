@@ -17,6 +17,8 @@ namespace Downloaders
 	///	Class responsible for downloading any given file 
 	///	using HTTP application protocol.
 	///	It can use any socket class that inherits CSocket
+	/// TODO: Add suport fot HTTPS
+
 	class CHTTPDownloader
 	{
 	using SocketClass = std::unique_ptr<Sockets::CSocket>;
@@ -101,7 +103,7 @@ namespace Downloaders
 				return std::nullopt;
 			}
 			headers.insert({std::string("Accept"), std::string("*/*")});
-			headers.insert({std::string("Accept-Encoding"), std::string("identity")});
+			headers.insert({std::string("Accept-Encoding"), std::string("identity, zstd")});
 			// TODO: think about adding encoding support with gzip and other libraries
 			
 			// Forming request

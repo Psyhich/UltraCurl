@@ -60,22 +60,22 @@ int main(int iArgc, char *argv[]) {
 		const bool cbShouldOverwrite = 
 			cParamaters.CheckIfParameterExist("f") || cParamaters.CheckIfParameterExist("force");
 
-		APIFunctionality::ConcurrentDownloaders downloaders = 
+		APIFunctionality::ConcurrentDownloaders *downloaders = 
 			APIFunctionality::WriteIntoFiles(pInputStream, cbShouldOverwrite, uCountOfThreads, 
 			[](const CURI &, std::optional<HTTP::CHTTPResponse>) {});
 
 		std::multimap<CURI, std::tuple<std::size_t, std::size_t>> progressData = 
-			downloaders.GetDownloadProgres();
+			downloaders->GetDownloadProgres();
 
 		CLI::CCLIProgressPrinter progessPrinter;
-		while(!downloaders.IsDone())
+		while(!downloaders->IsDone())
 		{
 			progessPrinter.PrintHelp();
 			progessPrinter.PrintProgress(progressData);
 
 			progessPrinter.Refresh();
 			std::this_thread::sleep_for(std::chrono::milliseconds(REFRESH_MILISIECONDS));
-			progressData = downloaders.GetDownloadProgres();
+			progressData = downloaders->GetDownloadProgres();
 		}
 	}
 	else

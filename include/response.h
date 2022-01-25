@@ -46,6 +46,11 @@ namespace HTTP
 		*/
 		void LoadData(std::vector<char> &&dataToLoad) noexcept;
 
+		/*
+		* Does decompression on a response data
+		*/
+		bool DecompressBody() noexcept;
+
 	private:
 		bool LoadStatusLine(std::size_t &nIndex, const std::vector<char> &cDataToParse) noexcept;
 		bool LoadHeaders(std::size_t &nIndex, const std::vector<char> &cDataToParse) noexcept;

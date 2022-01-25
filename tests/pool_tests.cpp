@@ -26,7 +26,7 @@ TEST(DownloaderPoolTests, BaseWorkingTests)
 					BaseParams(
 						"HTTP/1.1 200 OK\r\nsome-header: value_of_header\r\nContent-Length: 12\r\n\r\n123456789011",
 						"123456789011",
-						"www.debian.com",
+						"www.debian.org",
 						"/"
 					)
 				},
@@ -74,15 +74,40 @@ TEST(DownloaderPoolTests, BaseWorkingTests)
 		}
 	} router;
 
-	Downloader<TestRouter> concurentDownloader;
+	Downloader<TestRouter> *concurentDownloader = Downloader<TestRouter>::AllocatePool(2);
+
+	std::map<CURI, std::vector<char>> realResults;
 	
-	for(auto& [uri, params] : router.tables)
+	for(const auto &pair : router.tables)
 	{
-		concurentDownloader.AddNewTask(uri, 
-			[&](auto) -> bool
+		concurentDownloader->AddNewTask(pair.first, 
+			[&](auto gotData) -> bool
 			{
-				//ASSERT_EQ(gotData, params.sRealResponseData);
+				if(gotData)
+				{
+					realResults.insert({pair.first, gotData->GetData()});
+				}
 				return false;
 			});
 	}
+
+	std::map<CURI, std::vector<char>> desiredResults;
+	for(const auto &pair : router.tables)
+	{
+		std::vector<char> convertedData
+			{pair.second.sRealResponseData.begin(), pair.second.sRealResponseData.end()};
+		desiredResults.insert({pair.first, convertedData});
+	}
+
+	concurentDownloader->JoinTasksCompletion();
+
+	for(const auto &pair : desiredResults)
+	{
+		const auto foundResult = realResults.find(pair.first);
+		ASSERT_FALSE(foundResult == realResults.end());
+
+		ASSERT_EQ(pair.second, foundResult->second);
+	}
+
+	ASSERT_EQ(realResults, desiredResults);
 }

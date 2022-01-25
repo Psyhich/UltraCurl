@@ -32,64 +32,38 @@ namespace Downloaders::Concurrency
 	using TaskNonExecuted = std::pair<CURI, FDownloadCallback>;
 
 	public:
-		CConcurrentDownloader(unsigned uMaxCountOfThreads) noexcept : 
-			m_pRunningDownloadsLock{new std::mutex()},
-			m_pRunningDownloads{new std::list<TaskInProgress>()},
-			m_pUriQueueLock{new std::mutex()},
-			m_pUrisToDownload(new std::queue<TaskNonExecuted>()),
-			m_uMaxCountOfThreads{uMaxCountOfThreads},
-			m_pbShouldStop{new std::atomic<bool>(false)},
-			m_pbCanAddNewTasks{new std::atomic<bool>(true)}
-		{
-
-		}
-		CConcurrentDownloader() noexcept :
-			m_pRunningDownloadsLock{new std::mutex()},
-			m_pRunningDownloads{new std::list<TaskInProgress>()},
-			m_pUriQueueLock{new std::mutex()},
-			m_pUrisToDownload(new std::queue<TaskNonExecuted>()),
-			m_pbShouldStop{new std::atomic<bool>(false)},
-			m_pbCanAddNewTasks{new std::atomic<bool>(true)}
-		{
-			m_uMaxCountOfThreads = std::thread::hardware_concurrency();
-			// If hardware_concurrency() failed to determine count of hardware supported threads assuming constant number of them
-			if(m_uMaxCountOfThreads == 0)
-			{
-				m_uMaxCountOfThreads = DEFAULT_COUNT_OF_THREADS;
-			}
-		}
-		
-		// We cannot copy threads
+		// We cannot copy or move threads because we can move pointer to the pool
 		CConcurrentDownloader(const CConcurrentDownloader &cCopyOfDownloader) = delete;
 		CConcurrentDownloader &operator =(const CConcurrentDownloader &cCopyOfDownloader) = delete;
 
-		// We can change their owner
-		CConcurrentDownloader(CConcurrentDownloader &&downloaderToMove) noexcept
-		{
-			MoveData(std::move(downloaderToMove));
-		}
-		CConcurrentDownloader &operator =(CConcurrentDownloader &&downloaderToMove) noexcept
-		{
-			if(this != &downloaderToMove)
-			{
-				MoveData(std::move(downloaderToMove));
-			}
+		CConcurrentDownloader(CConcurrentDownloader &&downloaderToMove) = delete;
+		CConcurrentDownloader &operator =(CConcurrentDownloader &&downloaderToMove) = delete;
 
-			return *this;
+
+		// Creational method for heap-only allocation
+		static CConcurrentDownloader<SocketClass> *AllocatePool(unsigned uCountOfThreads = 0) noexcept
+		{
+			if(uCountOfThreads == 0)
+			{
+				return new(std::nothrow) CConcurrentDownloader<SocketClass>();
+			}
+			return new(std::nothrow) CConcurrentDownloader<SocketClass>(uCountOfThreads);
 		}
 
 		/// Function to add new URI for download
 		void AddNewTask(const CURI &cURIToDownload, FDownloadCallback fCallback) noexcept
 		{
 			// We can't add new tasks if we already stoped processing
-			if(*m_pbShouldStop || !m_pbCanAddNewTasks)
+			if(*m_pbShouldStop || !*m_pbCanAddNewTasks)
 			{
 				return;
 			}
-			std::unique_lock<std::mutex> urisLock{*m_pUriQueueLock};
 
-			m_pUrisToDownload->push({cURIToDownload, fCallback});
+			std::unique_lock<std::mutex> urisLock{*m_pUriQueueLock};
+				m_pUrisToDownload->push({cURIToDownload, fCallback});
 			urisLock.unlock();
+
+			m_pbIsDone->store(false);
 
 			LoadQueueIntoDownloads();
 		}
@@ -99,14 +73,14 @@ namespace Downloaders::Concurrency
 			m_pbCanAddNewTasks->store(false);
 
 			// Waiting till queue is empty
-			while(!m_pUrisToDownload->empty())
+			while(!IsDone())
 			{
 
 			}
 
+			std::scoped_lock<std::mutex> downloadsLock{*m_pRunningDownloadsLock};
 			for(auto &pair : *m_pRunningDownloads)
 			{
-				std::scoped_lock<std::mutex> downloadsLock{*m_pRunningDownloadsLock};
 				if(std::thread &runningThread = std::get<0>(pair);
 					runningThread.joinable())
 				{
@@ -115,9 +89,10 @@ namespace Downloaders::Concurrency
 			}
 		}
 
+		// NOTE: Rewrite this using some atocmic<bool> flag
 		bool IsDone() const noexcept
 		{
-			return m_pRunningDownloads->empty() &&m_pUrisToDownload->empty();
+			return m_pbIsDone->load();
 		}
 
 		std::multimap<CURI, std::tuple<std::size_t, std::size_t>> GetDownloadProgres()
@@ -168,41 +143,47 @@ namespace Downloaders::Concurrency
 			DealocateResources();
 		}
 	private:
-		void MoveData(CConcurrentDownloader &&downloaderToMove) noexcept
+		// Default constructor is hidden to prohibit on stack creation
+		CConcurrentDownloader(unsigned uMaxCountOfThreads) noexcept : 
+			m_pRunningDownloadsLock{new std::mutex()},
+			m_pRunningDownloads{new std::list<TaskInProgress>()},
+			m_pUriQueueLock{new std::mutex()},
+			m_pUrisToDownload(new std::queue<TaskNonExecuted>()),
+			m_uMaxCountOfThreads{uMaxCountOfThreads},
+			m_pbShouldStop{new std::atomic<bool>(false)},
+			m_pbCanAddNewTasks{new std::atomic<bool>(true)},
+			m_pbIsDone{new std::atomic<bool>(false)}
 		{
-				std::scoped_lock<std::mutex> downloadsLock {*downloaderToMove.m_pRunningDownloadsLock};
-				std::scoped_lock<std::mutex> queueLock {*downloaderToMove.m_pUriQueueLock};
 
-				DealocateResources();
-
-				m_pRunningDownloads = downloaderToMove.m_pRunningDownloads;
-				m_pUrisToDownload = downloaderToMove.m_pUrisToDownload;
-
-				m_pRunningDownloadsLock = downloaderToMove.m_pRunningDownloadsLock;
-				m_pUriQueueLock = downloaderToMove.m_pUriQueueLock;
-
-				m_pbShouldStop = downloaderToMove.m_pbShouldStop;
-				m_pbCanAddNewTasks = downloaderToMove.m_pbCanAddNewTasks;
-
-				downloaderToMove.m_pRunningDownloadsLock = nullptr;
-				downloaderToMove.m_pUriQueueLock = nullptr;
-				
-				downloaderToMove.m_pbShouldStop = nullptr;
-				downloaderToMove.m_pbCanAddNewTasks = nullptr;
-
-				downloaderToMove.m_pRunningDownloads = nullptr;
-				downloaderToMove.m_pUrisToDownload = nullptr;
 		}
-
+		CConcurrentDownloader() noexcept :
+			m_pRunningDownloadsLock{new std::mutex()},
+			m_pRunningDownloads{new std::list<TaskInProgress>()},
+			m_pUriQueueLock{new std::mutex()},
+			m_pUrisToDownload(new std::queue<TaskNonExecuted>()),
+			m_pbShouldStop{new std::atomic<bool>(false)},
+			m_pbCanAddNewTasks{new std::atomic<bool>(true)},
+			m_pbIsDone{new std::atomic<bool>(false)}
+		{
+			m_uMaxCountOfThreads = std::thread::hardware_concurrency();
+			// If hardware_concurrency() failed to determine count of hardware supported threads assuming constant number of them
+			if(m_uMaxCountOfThreads == 0)
+			{
+				m_uMaxCountOfThreads = DEFAULT_COUNT_OF_THREADS;
+			}
+		}
+		
 		inline void DealocateResources() noexcept
 		{
 			delete m_pRunningDownloadsLock;
 			delete m_pUriQueueLock;
-			delete m_pbShouldStop;
-			delete m_pbCanAddNewTasks;
 			
 			delete m_pUrisToDownload;
 			delete m_pRunningDownloads;
+
+			delete m_pbShouldStop;
+			delete m_pbCanAddNewTasks;
+			delete m_pbIsDone;
 		}
 
 		void DownloadTask(TaskInProgress &taskInProgress, FDownloadCallback fCallback) noexcept
@@ -211,7 +192,8 @@ namespace Downloaders::Concurrency
 			auto &[thread, downloader, uri] = taskInProgress;
 			do
 			{
-				downloader = Downloaders::CHTTPDownloader(std::unique_ptr<SocketClass>(new SocketClass()));
+				downloader = 
+					Downloaders::CHTTPDownloader(std::unique_ptr<SocketClass>(new SocketClass()));
 				gotData = downloader.Download(uri);
 			}
 			while(fCallback(std::move(gotData)) && !m_pbShouldStop);
@@ -225,7 +207,7 @@ namespace Downloaders::Concurrency
 
 		void DeleteTaskByID(std::thread::id nThreadID) noexcept
 		{
-			if(!m_pbShouldStop->load())
+			if(m_pbShouldStop->load())
 			{
 				return;
 			}
@@ -248,17 +230,18 @@ namespace Downloaders::Concurrency
 
 		void LoadQueueIntoDownloads() noexcept
 		{
-			if(!m_pbShouldStop->load())
+			if(m_pbShouldStop->load())
 			{
 				return;
 			}
 
-			std::scoped_lock<std::mutex> downloadsLock(*m_pRunningDownloadsLock);
 			std::scoped_lock<std::mutex> queueLock(*m_pUriQueueLock);
+			std::scoped_lock<std::mutex> downloadsLock(*m_pRunningDownloadsLock);
 
 			while(m_pRunningDownloads->size() < m_uMaxCountOfThreads && !m_pUrisToDownload->empty())
 			{
 				auto [uri, callback] = std::move(m_pUrisToDownload->front());
+
 				m_pRunningDownloads->push_back(
 					std::make_tuple(std::thread(), 
 						Downloaders::CHTTPDownloader(std::unique_ptr<SocketClass>(new SocketClass())), uri));
@@ -270,6 +253,12 @@ namespace Downloaders::Concurrency
 					std::thread(&Concurrency::CConcurrentDownloader<SocketClass>::DownloadTask,
 						this, std::ref(downloadPair), callback);
 			}
+
+			if(m_pUrisToDownload->empty() && m_pRunningDownloads->empty())
+			{
+				m_pbIsDone->store(true);
+			}
+
 		}
 	private:
 		static const constexpr unsigned DEFAULT_COUNT_OF_THREADS{2};
@@ -283,6 +272,7 @@ namespace Downloaders::Concurrency
 		unsigned m_uMaxCountOfThreads;
 		std::atomic<bool> *m_pbShouldStop{nullptr};
 		std::atomic<bool> *m_pbCanAddNewTasks{nullptr};
+		std::atomic<bool> *m_pbIsDone{nullptr};
 	};
 }
 
