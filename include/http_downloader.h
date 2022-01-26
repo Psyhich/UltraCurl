@@ -104,7 +104,6 @@ namespace Downloaders
 			}
 			headers.insert({std::string("Accept"), std::string("*/*")});
 			headers.insert({std::string("Accept-Encoding"), std::string("identity, zstd")});
-			// TODO: think about adding encoding support with gzip and other libraries
 			
 			// Forming request
 			// Getting path
@@ -170,9 +169,9 @@ namespace Downloaders
 			const HTTP::Headers &cResponseHeaders = response.GetHeaders();
 
 			const auto cContentLengthHeader = 
-				cResponseHeaders.find("Content-Length");
+				cResponseHeaders.find("content-length");
 			const auto cTransferEncoding = 
-				cResponseHeaders.find("Transfer-Encoding");
+				cResponseHeaders.find("transfer-encoding");
 
 			std::optional<std::vector<char>> possiblyReadData;
 			bool bIsReadData = false;

@@ -95,6 +95,10 @@ bool HTTP::CHTTPResponse::LoadHeaders(std::size_t &nIndex, const std::vector<cha
 				break;
 			}
 
+			// All key values should have lowercase letters 
+			std::transform(sReadKey.begin(), sReadKey.end(), sReadKey.begin(), 
+				[](char c) -> char{ return std::tolower(c); });
+
 			m_headers[sReadKey] = sReadValue;
 
 			sReadKey = "";

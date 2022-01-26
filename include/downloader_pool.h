@@ -89,7 +89,6 @@ namespace Downloaders::Concurrency
 			}
 		}
 
-		// NOTE: Rewrite this using some atocmic<bool> flag
 		bool IsDone() const noexcept
 		{
 			return m_pbIsDone->load();
