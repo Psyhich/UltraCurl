@@ -3,10 +3,10 @@ cmake_minimum_required(VERSION 3.21)
 project(ultra_curl)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
+
 # GoogleTest requires at least C++11
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 
 set(SOURCES 
 	include/base_functionality.h src/base_functionality.cpp
@@ -36,12 +36,8 @@ set(TESTS
 set(CMAKE_CXX_FLAGS_DEBUG " -g -O0 -fprofile-arcs -ftest-coverage ${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_DEBUG " -g -O0 -fprofile-arcs -ftest-coverage ${CMAKE_C_FLAGS_DEBUG}")
 
-# Making all warnings errors and turning on pedantic feature in GCC
-if(MSVC)
-  add_compile_options(/W4 /WX)
-else()
-  add_compile_options(-Wall -Wextra -Wpedantic -Werror)
-endif()
+# Ensuring all third party libs will be builded in shared state
+SET(BUILD_SHARED_LIBS true)
 
 find_package(Threads REQUIRED)
 
@@ -49,13 +45,16 @@ find_package(Threads REQUIRED)
 add_subdirectory(lib/googletest)
 enable_testing()
 
+# Adding third party libraries
 add_subdirectory(lib/zstd/build/cmake)
+add_subdirectory(lib/openssl-cmake)
 
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 target_link_libraries(${PROJECT_NAME} PUBLIC
 	pthread
-	libzstd_static
+	ssl
+	libzstd_shared
 )
 target_include_directories(
 	${PROJECT_NAME} PUBLIC 
@@ -89,6 +88,23 @@ add_custom_command(TARGET ultra_curlcli
 					COMMAND ctest -C $<CONFIGURATION> 
 						--output-on-failure
 )
+
+# Making all warnings errors and turning on pedantic feature in GCC
+if(MSVC)
+	target_compile_options(${PROJECT_NAME}
+		PRIVATE "/W4" "/WX")
+	target_compile_options("${PROJECT_NAME}cli"
+		PRIVATE "/W4" "/WX")
+	target_compile_options(tests
+		PRIVATE "/W4" "/WX")
+else()
+	target_compile_options(${PROJECT_NAME}
+		PRIVATE "-Wall" "-Wextra" "-Wpedantic" "-Werror")
+	target_compile_options("${PROJECT_NAME}cli"
+		PRIVATE "-Wall" "-Wextra" "-Wpedantic" "-Werror")
+	target_compile_options(tests
+		PRIVATE "-Wall" "-Wextra" "-Wpedantic" "-Werror")
+endif()
 
 # Command to create symlink for clangd to see all includes
 if(CMAKE_BUILD_TYPE MATCHES Debug)
