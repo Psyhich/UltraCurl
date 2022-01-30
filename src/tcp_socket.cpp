@@ -22,7 +22,7 @@ std::optional<uint16_t> Sockets::CTcpSocket::ExtractPortInByteOrder(const CURI &
 	return htons(80);
 }
 
-std::optional<sockaddr> Sockets::CTcpSocket::GetSocketAddress(const CURI& cURIToGetAddress) noexcept
+std::optional<sockaddr_in> Sockets::CTcpSocket::GetSocketAddress(const CURI& cURIToGetAddress) noexcept
 {
 	if(const auto cAddress = cURIToGetAddress.GetPureAddress())
 	{
@@ -33,15 +33,33 @@ std::optional<sockaddr> Sockets::CTcpSocket::GetSocketAddress(const CURI& cURITo
 		addressHint.ai_socktype = SOCK_STREAM;
 		addressHint.ai_protocol = 0;
 
+		// Getting right port 
+		// Firstly, we try to get protocol, 
+		// if not possible getting port 
+		// if neither, using default port
+		auto sService = cURIToGetAddress.GetProtocol();
+		if(!sService)
+		{
+			if(const auto ciAvailablePort = cURIToGetAddress.GetPort())
+			{
+				sService = std::to_string(*ciAvailablePort);
+			}
+		}
+		if(!sService)
+		{
+			sService = DEFAULT_PORT;
+		}
+
 		// Creating pointer for array of resolved hosts(we would need only first one)
 		addrinfo *ppResolvedHosts = nullptr;
-		if(getaddrinfo(cAddress->c_str(), DEFAULT_PORT, &addressHint, &ppResolvedHosts) != 0 || 
+		if(getaddrinfo(cAddress->c_str(), sService->c_str(), &addressHint, &ppResolvedHosts) != 0 || 
 			ppResolvedHosts == nullptr)
 		{
 			fprintf(stderr, "Failed to resolve given address\n");
 			return std::nullopt;
 		}
-		const sockaddr cFirstAddress = *ppResolvedHosts[0].ai_addr;
+		const sockaddr_in cFirstAddress = 
+			*reinterpret_cast<const sockaddr_in *>(ppResolvedHosts[0].ai_addr);
 		freeaddrinfo(ppResolvedHosts);
 		return cFirstAddress;
 	}
@@ -54,34 +72,22 @@ bool Sockets::CTcpSocket::EstablishTCPConnection(const CURI &cURIToConnect) noex
 	m_nBytesToRead = 0;
 
 	// Getting address info to know which IP protocol to use
-	std::optional<sockaddr> cResolvedAddress = GetSocketAddress(cURIToConnect);
+	std::optional<sockaddr_in> cResolvedAddress = GetSocketAddress(cURIToConnect);
 	if(!cResolvedAddress)
 	{
 		fprintf(stderr, "Failed to resolve given address\n");
 		return false;
 	}
-
-	std::optional<uint16_t> uiPort = ExtractPortInByteOrder(cURIToConnect);
-	// If we got wrongly written port returning nullopt
-	if(!uiPort)
-	{
-		fprintf(stderr, "Given port is invalid\n");
-		return false;
-	}
 	
 	// Creating socket
-	m_iSocketFD = socket(cResolvedAddress->sa_family, SOCK_STREAM, 0);
+	m_iSocketFD = socket(cResolvedAddress->sin_family, SOCK_STREAM, 0);
 	if(m_iSocketFD == -1)
 	{
 		fprintf(stderr, "Failed to create socket\n");
 		return false;
 	}
 
-	// Setting specified port for resolved address
-	sockaddr_in &address = ((sockaddr_in&)*cResolvedAddress);
-	address.sin_port = *uiPort;
-
-	if(connect(m_iSocketFD, (&*cResolvedAddress), sizeof(sockaddr)) == -1)
+	if(connect(m_iSocketFD, (sockaddr *)(&*cResolvedAddress), sizeof(sockaddr)) == -1)
 	{
 		fprintf(stderr, "Failed to connect to given address\n");
 		close(m_iSocketFD);

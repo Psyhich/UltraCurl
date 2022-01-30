@@ -14,9 +14,9 @@
 namespace Downloaders 
 {
 
-	///	Class responsible for downloading any given file 
-	///	using HTTP application protocol.
-	///	It can use any socket class that inherits CSocket
+	/// Class responsible for downloading any given file 
+	/// using HTTP application protocol.
+	/// It can use any socket class that inherits CSocket
 
 	class CHTTPDownloader
 	{

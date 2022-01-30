@@ -1,7 +1,7 @@
 #ifndef TCP_SOCKET_H
 #define TCP_SOCKET_H
 
-#include <sys/socket.h>
+#include <netdb.h>
 
 #include "sockets.h"
 
@@ -60,7 +60,7 @@ namespace Sockets
 
 		/// Returns port in network byte order
 		static std::optional<uint16_t> ExtractPortInByteOrder(const CURI &cURIToGetAddress) noexcept;
-		static std::optional<sockaddr> GetSocketAddress(const CURI &cURIToGetPort) noexcept;
+		static std::optional<sockaddr_in> GetSocketAddress(const CURI &cURIToGetPort) noexcept;
 	private:
 		void MoveData(CTcpSocket &&socketToMove) noexcept;
 	private:
