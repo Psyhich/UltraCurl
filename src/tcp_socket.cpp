@@ -11,8 +11,7 @@
 #include <algorithm>
 #include <vector>
 
-#include "sockets.h"
-
+#include "tcp_socket.h"
 
 std::optional<uint16_t> Sockets::CTcpSocket::ExtractPortInByteOrder(const CURI &cURIToGetPort) noexcept
 {
@@ -36,7 +35,7 @@ std::optional<sockaddr> Sockets::CTcpSocket::GetSocketAddress(const CURI& cURITo
 
 		// Creating pointer for array of resolved hosts(we would need only first one)
 		addrinfo *ppResolvedHosts = nullptr;
-		if(getaddrinfo(cAddress->c_str(), HTTP_SERVICE, &addressHint, &ppResolvedHosts) != 0 || 
+		if(getaddrinfo(cAddress->c_str(), DEFAULT_PORT, &addressHint, &ppResolvedHosts) != 0 || 
 			ppResolvedHosts == nullptr)
 		{
 			fprintf(stderr, "Failed to resolve given address\n");
@@ -49,47 +48,7 @@ std::optional<sockaddr> Sockets::CTcpSocket::GetSocketAddress(const CURI& cURITo
 	return std::nullopt;
 }
 
-void Sockets::CTcpSocket::MoveData(CTcpSocket &&socketToMove) noexcept
-{
-	m_nBytesToRead = socketToMove.m_nBytesToRead;
-	m_nReadBytes = socketToMove.m_nReadBytes;
-	m_iSocketFD = socketToMove.m_iSocketFD;
-
-	socketToMove.m_nBytesToRead = std::nullopt;
-	socketToMove.m_nReadBytes = std::nullopt;
-	socketToMove.m_iSocketFD = -1;
-}
-
-
-Sockets::CTcpSocket::CTcpSocket()
-{
-}
-
-Sockets::CTcpSocket::~CTcpSocket()
-{
-	if(m_iSocketFD != -1)
-	{
-		close(m_iSocketFD);
-	}
-}
-
-
-Sockets::CTcpSocket::CTcpSocket(CTcpSocket &&socketToMove)
-{
-	MoveData(std::move(socketToMove));
-}
-
-Sockets::CTcpSocket& Sockets::CTcpSocket::CTcpSocket::operator =(CTcpSocket &&socketToMove)
-{
-	if(this != &socketToMove)
-	{
-		MoveData(std::move(socketToMove));
-	}
-
-	return *this;
-}
-
-bool Sockets::CTcpSocket::Connect(const CURI &cURIToConnect) noexcept
+bool Sockets::CTcpSocket::EstablishTCPConnection(const CURI &cURIToConnect) noexcept
 {
 	m_nReadBytes = 0;
 	m_nBytesToRead = 0;
@@ -131,6 +90,56 @@ bool Sockets::CTcpSocket::Connect(const CURI &cURIToConnect) noexcept
 	}
 
 	return true;
+}
+
+void Sockets::CTcpSocket::Disconnect() noexcept
+{
+	if(m_iSocketFD != -1)
+	{
+		close(m_iSocketFD);
+	}
+}
+
+void Sockets::CTcpSocket::MoveData(CTcpSocket &&socketToMove) noexcept
+{
+	m_nBytesToRead = socketToMove.m_nBytesToRead;
+	m_nReadBytes = socketToMove.m_nReadBytes;
+	m_iSocketFD = socketToMove.m_iSocketFD;
+
+	socketToMove.m_nBytesToRead = std::nullopt;
+	socketToMove.m_nReadBytes = std::nullopt;
+	socketToMove.m_iSocketFD = -1;
+}
+
+
+Sockets::CTcpSocket::CTcpSocket()
+{
+}
+
+Sockets::CTcpSocket::~CTcpSocket()
+{
+	Disconnect();
+}
+
+
+Sockets::CTcpSocket::CTcpSocket(CTcpSocket &&socketToMove)
+{
+	MoveData(std::move(socketToMove));
+}
+
+Sockets::CTcpSocket& Sockets::CTcpSocket::CTcpSocket::operator =(CTcpSocket &&socketToMove)
+{
+	if(this != &socketToMove)
+	{
+		MoveData(std::move(socketToMove));
+	}
+
+	return *this;
+}
+
+bool Sockets::CTcpSocket::Connect(const CURI &cURIToConnect) noexcept
+{
+	return EstablishTCPConnection(cURIToConnect);
 }
 
 std::optional<std::vector<char>> Sockets::CTcpSocket::ReadTillEnd() noexcept

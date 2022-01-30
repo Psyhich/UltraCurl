@@ -5,7 +5,7 @@
 #include <ostream>
 #include <optional>
 
-#include "sockets.h"
+#include "tcp_socket.h"
 #include "uri.h"
 #include "downloader_pool.h"
 
