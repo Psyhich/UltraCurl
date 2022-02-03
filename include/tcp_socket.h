@@ -36,34 +36,16 @@ namespace Sockets
 
 		/// Writes all data to socket
 		bool Write(const char* pcchBytes, size_t nCount) noexcept override;
-	protected:
-		static const constexpr char *DEFAULT_PORT = "80";
+
 		static const constexpr size_t BUFFER_SIZE = 4096;
-
-		bool EstablishTCPConnection(const CURI &cURIToConnect) noexcept;
-		void Disconnect() noexcept;
-
-		inline int GetFD() noexcept
-		{
-			return m_iSocketFD;
-		}
-
-		inline std::array<char, BUFFER_SIZE>& GetBuffer() noexcept
-		{
-			return m_buffer;
-		}
-
-		inline std::array<char, BUFFER_SIZE>::iterator& GetValidEnd()
-		{
-			return m_nCurrentValidDataEnd;
-		}
-
+	private:
 		/// Returns port in network byte order
-		static std::optional<uint16_t> ExtractPortInByteOrder(const CURI &cURIToGetAddress) noexcept;
 		static std::optional<sockaddr_in> GetSocketAddress(const CURI &cURIToGetPort) noexcept;
-	private:
 		void MoveData(CTcpSocket &&socketToMove) noexcept;
+
 	private:
+		static const constexpr char *DEFAULT_PORT = "http";
+
 		int m_iSocketFD{-1};
 		std::array<char, BUFFER_SIZE> m_buffer;
 		std::array<char, BUFFER_SIZE>::iterator m_nCurrentValidDataEnd{m_buffer.begin()};

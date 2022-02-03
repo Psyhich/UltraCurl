@@ -15,7 +15,7 @@ APIFunctionality::ConcurrentDownloaders *APIFunctionality::WriteIntoFiles( std::
 	FDownloadCallback fDownloadCallback) noexcept
 {
 	ConcurrentDownloaders *downloaderPool = 
-		ConcurrentDownloaders::AllocatePool(uCountOfThreads);
+		ConcurrentDownloaders::AllocatePool(Downloaders::CHTTPDownloader::ValidSocketFactory, uCountOfThreads);
 
 	// Now reading the stream and after each \n downloading the file from URI
 	std::string sLine; 
@@ -82,7 +82,7 @@ void APIFunctionality::WriteIntoStream(std::istream *const cpInputStream, std::o
 		}
 
 		Downloaders::CHTTPDownloader downloader
-			{std::unique_ptr<Sockets::CTcpSocket>(new Sockets::CTcpSocket())};
+			{Downloaders::CHTTPDownloader::ValidSocketFactory(cPageURI)};
 		if(const auto cResponse = downloader.Download(cPageURI))
 		{
 			cpOutputStream->write(cResponse->GetData().data(), cResponse->GetData().size());

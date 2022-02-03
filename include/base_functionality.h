@@ -11,7 +11,7 @@
 
 namespace APIFunctionality
 {
-	using ConcurrentDownloaders = Downloaders::Concurrency::CConcurrentDownloader<Sockets::CTcpSocket>;
+	using ConcurrentDownloaders = Downloaders::Concurrency::CConcurrentDownloader;
 	using FDownloadCallback = std::function<void(const CURI &cDownloadedURI, std::optional<HTTP::CHTTPResponse>)>;
 
 	/// Function to concurrently download all specified links and store them in files

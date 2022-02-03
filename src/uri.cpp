@@ -57,10 +57,10 @@ std::optional<int> CURI::GetPort() const noexcept
 	// Looking for port start
 	portStartPos = std::find(portStartPos, m_originalString.end(), ':');
 
-	// If we didn't find port, assuming it's 80
+	// If we didn't find port setting it to nullopt
 	if(portStartPos == m_originalString.end())
 	{
-		return 80;
+		return std::nullopt;
 	}
 	// If we find port, skip ':'
 	++portStartPos;

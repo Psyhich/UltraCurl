@@ -22,12 +22,14 @@ namespace Downloaders::Concurrency
 	using FDownloadCallback = 
 		std::function<bool(std::optional<HTTP::CHTTPResponse>&&)>;
 
+	using FSocketFactory = 
+		std::function<Downloaders::CHTTPDownloader::SocketClass(const CURI& cURIToProcess)>;
+
 	/// Special thread pool that carries conccurent HTTP download
 	/// provided by SocketClass that should inherit CSocket class
 	/// After each download running callback function with passed response
-	template<class SocketClass> class CConcurrentDownloader
+	class CConcurrentDownloader
 	{
-	static_assert(std::is_base_of<Sockets::CSocket, SocketClass>(), "SocketClass should inherit CSocket");
 	using TaskInProgress = std::tuple<std::thread, Downloaders::CHTTPDownloader, CURI>;
 	using TaskNonExecuted = std::pair<CURI, FDownloadCallback>;
 
@@ -41,13 +43,13 @@ namespace Downloaders::Concurrency
 
 
 		// Creational method for heap-only allocation
-		static CConcurrentDownloader<SocketClass> *AllocatePool(unsigned uCountOfThreads = 0) noexcept
+		static CConcurrentDownloader *AllocatePool(FSocketFactory fFactory, unsigned uCountOfThreads = 0) noexcept
 		{
 			if(uCountOfThreads == 0)
 			{
-				return new(std::nothrow) CConcurrentDownloader<SocketClass>();
+				return new(std::nothrow) CConcurrentDownloader(fFactory);
 			}
-			return new(std::nothrow) CConcurrentDownloader<SocketClass>(uCountOfThreads);
+			return new(std::nothrow) CConcurrentDownloader(fFactory, uCountOfThreads);
 		}
 
 		/// Function to add new URI for download
@@ -143,7 +145,8 @@ namespace Downloaders::Concurrency
 		}
 	private:
 		// Default constructor is hidden to prohibit on stack creation
-		CConcurrentDownloader(unsigned uMaxCountOfThreads) noexcept : 
+		CConcurrentDownloader(FSocketFactory fFactory, unsigned uMaxCountOfThreads) noexcept : 
+			m_fCurrentSocketFactory{fFactory},
 			m_pRunningDownloadsLock{new std::mutex()},
 			m_pRunningDownloads{new std::list<TaskInProgress>()},
 			m_pUriQueueLock{new std::mutex()},
@@ -155,7 +158,8 @@ namespace Downloaders::Concurrency
 		{
 
 		}
-		CConcurrentDownloader() noexcept :
+		CConcurrentDownloader(FSocketFactory fFactory) noexcept :
+			m_fCurrentSocketFactory{fFactory},
 			m_pRunningDownloadsLock{new std::mutex()},
 			m_pRunningDownloads{new std::list<TaskInProgress>()},
 			m_pUriQueueLock{new std::mutex()},
@@ -191,8 +195,6 @@ namespace Downloaders::Concurrency
 			auto &[thread, downloader, uri] = taskInProgress;
 			do
 			{
-				downloader = 
-					Downloaders::CHTTPDownloader(std::unique_ptr<SocketClass>(new SocketClass()));
 				gotData = downloader.Download(uri);
 			}
 			while(fCallback(std::move(gotData)) && !m_pbShouldStop);
@@ -243,13 +245,13 @@ namespace Downloaders::Concurrency
 
 				m_pRunningDownloads->push_back(
 					std::make_tuple(std::thread(), 
-						Downloaders::CHTTPDownloader(std::unique_ptr<SocketClass>(new SocketClass())), uri));
+						Downloaders::CHTTPDownloader(m_fCurrentSocketFactory(uri)), uri));
 				m_pUrisToDownload->pop();
 
 				auto &downloadPair = m_pRunningDownloads->back();
 
 				std::get<0>(downloadPair) = 
-					std::thread(&Concurrency::CConcurrentDownloader<SocketClass>::DownloadTask,
+					std::thread(&Concurrency::CConcurrentDownloader::DownloadTask,
 						this, std::ref(downloadPair), callback);
 			}
 
@@ -261,6 +263,8 @@ namespace Downloaders::Concurrency
 		}
 	private:
 		static const constexpr unsigned DEFAULT_COUNT_OF_THREADS{2};
+
+		const FSocketFactory m_fCurrentSocketFactory;
 
 		std::mutex *m_pRunningDownloadsLock{nullptr};
 		std::list<TaskInProgress> *m_pRunningDownloads;

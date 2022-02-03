@@ -22,8 +22,15 @@ namespace Sockets
 
 		virtual bool Connect(const CURI& cURIToConnect) noexcept = 0;
 
+		/// Reads till some specified string including that string
+		/// If string is not found, returning nullopt
 		virtual ReadResult ReadTill(const std::string &csStringToReadTill) noexcept = 0;
+
+		/// Reads some count of chars from socket
 		virtual ReadResult ReadCount(size_t nCountToRead) noexcept = 0;
+
+		/// Reads data till the socket is 
+		/// not closed or there is nothing to get
 		virtual ReadResult ReadTillEnd() noexcept = 0;
 
 		virtual bool Write(const char* pcchBytes, size_t nCount)  noexcept = 0;
