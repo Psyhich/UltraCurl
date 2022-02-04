@@ -93,7 +93,7 @@ bool CheckRequest(const std::string &sRequest, const std::string& sAddress, cons
 		}
 		else if(sKey == "accept-encoding")
 		{
-			if(sValue != "identity")
+			if(sValue != "identity, zstd")
 			{
 				return false;
 			}

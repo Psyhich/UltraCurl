@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <iterator>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/socket.h>
@@ -7,6 +8,7 @@
 #include <stdio.h>
 
 #include <cstring>
+#include <algorithm>
 #include <vector>
 
 #include "sockets.h"
@@ -139,27 +141,22 @@ std::optional<std::vector<char>> Sockets::CTcpSocket::ReadTillEnd() noexcept
 		return std::nullopt;
 	}
 	
-	char chBuffer[BUFFER_SIZE];
-	memset(chBuffer, 0, sizeof(char) * BUFFER_SIZE);
+	// Consuming all data from m_buffer
+	std::vector<char> messageVector{m_buffer.begin(), m_nCurrentValidDataEnd};
 
-	std::vector<char> messageVector;
-	messageVector.reserve(BUFFER_SIZE);
-
-	// If we recive same count as BUFFER_SIZE, we can request new block of data
 	ssize_t nRecivedBytes;
 	do
 	{
-		nRecivedBytes = recv(m_iSocketFD, chBuffer, sizeof(char) * BUFFER_SIZE, 0);
+		nRecivedBytes = recv(m_iSocketFD, m_buffer.data(), sizeof(char) * m_buffer.size(), 0);
 		if(nRecivedBytes == -1)
 		{
 			fprintf(stderr, "Error while reciving data\n");
 			return std::nullopt;
 		}
+		m_nCurrentValidDataEnd = m_buffer.begin() + nRecivedBytes;
 
-		for(ssize_t nCount = 0; nCount < nRecivedBytes; nCount++)
-		{
-			messageVector.push_back(chBuffer[nCount]);
-		}
+		std::copy(m_buffer.begin(), m_nCurrentValidDataEnd, 
+			std::back_inserter(messageVector));
 
 		*m_nReadBytes += nRecivedBytes;
 		*m_nBytesToRead += nRecivedBytes;
@@ -182,30 +179,59 @@ std::optional<std::vector<char>> Sockets::CTcpSocket::ReadTill(const std::string
 	{
 		return std::nullopt;
 	}
-	size_t nCurrentStringIndex = 0;
-	
-	std::vector<char> readData;
+	size_t nCurrentStringIndex{0};
+	ssize_t nBytesRead{0};
 
-	char chReadChar;
-	// TODO: rewrite this socket as adapter with internal buffer
-	while(recv(m_iSocketFD, &chReadChar, 1, 0) > 0)
+	std::vector<char> readData;
+	do
 	{
-		readData.push_back(chReadChar);
-		if(chReadChar == csStringToReadTill[nCurrentStringIndex])
+		// Firstly trying to find given string in buffer, for situation when it's not empty
+		for(auto currentChar = m_buffer.begin(); 
+			currentChar != m_nCurrentValidDataEnd + 1; currentChar++)
 		{
-			++nCurrentStringIndex;
-			if(nCurrentStringIndex == csStringToReadTill.size())
+			readData.push_back(*currentChar);
+
+			if(*currentChar == csStringToReadTill[nCurrentStringIndex])
 			{
-				return readData;
+				++nCurrentStringIndex;
+				if(nCurrentStringIndex == csStringToReadTill.size())
+				{
+					size_t nBytesScanned = 
+						std::distance(m_buffer.begin(), currentChar);
+					*m_nReadBytes += nBytesScanned;
+					*m_nBytesToRead += nBytesScanned;
+
+					// Setting new valid data end
+					m_nCurrentValidDataEnd = 
+						m_buffer.begin() + std::distance(currentChar, m_nCurrentValidDataEnd);
+					// After we found point where given string ends, 
+					// shifting remainnig data
+					std::rotate(m_buffer.begin(), currentChar, m_buffer.end());
+					readData.shrink_to_fit();
+					return readData;
+				}
+			}
+			else 
+			{
+				nCurrentStringIndex = 0;
 			}
 		}
-		else 
+		
+		// If we haven't found string in given buffer, reading next bytes from socket
+		nBytesRead = 
+			recv(m_iSocketFD, m_buffer.data(), sizeof(char) * m_buffer.size(), 0);
+		if(nBytesRead == -1)
 		{
-			nCurrentStringIndex = 0;
+			fprintf(stderr, "Error while reciving data\n");
+			return std::nullopt;
 		}
-		*m_nReadBytes += 1;
-		*m_nBytesToRead += 1;
-	}
+
+		m_nCurrentValidDataEnd = m_buffer.begin() + nBytesRead + 1;
+
+		*m_nReadBytes += BUFFER_SIZE;
+		*m_nBytesToRead += BUFFER_SIZE;
+	} while(nBytesRead != 0);
+
 	return std::nullopt;
 }
 
@@ -225,14 +251,33 @@ std::optional<std::vector<char>> Sockets::CTcpSocket::ReadCount(size_t nCountToR
 	std::vector<char> readData;
 	readData.resize(nCountToRead);
 
-	ssize_t nBytesRead = 0;
 	size_t nBytesLeft = nCountToRead;
 
 	*m_nBytesToRead += nCountToRead;
+
 	while(nBytesLeft > 0)
 	{
+		// Checking and writing data into vector from buffer
+		size_t nLengthOfValidData = 
+			(size_t)std::distance(m_buffer.begin(), m_nCurrentValidDataEnd);
+		if(nLengthOfValidData < nBytesLeft)
+		{
+			std::copy(m_buffer.begin(), m_nCurrentValidDataEnd, 
+				std::back_inserter(readData));
+			nBytesLeft -= nLengthOfValidData;
+			*m_nReadBytes += nLengthOfValidData;
+		}
+		else
+		{
+			std::copy(m_buffer.begin(), m_buffer.begin() + nBytesLeft + 1,
+				std::back_inserter(readData));
+			*m_nReadBytes += nBytesLeft;
+			return readData;
+		}
+		
 		const ssize_t nBytesRecived = 
-			recv(m_iSocketFD, readData.data() + nBytesRead, nBytesLeft, 0);
+			recv(m_iSocketFD, m_buffer.data(), m_buffer.size() * sizeof(char), 0);
+
 		if(nBytesRecived < 0)
 		{
 			fprintf(stderr, "An error occured while reciving data\n");
@@ -243,9 +288,9 @@ std::optional<std::vector<char>> Sockets::CTcpSocket::ReadCount(size_t nCountToR
 			fprintf(stderr, "Connection was closed by host");
 			return std::nullopt;
 		}
-		nBytesRead += nBytesRecived;
-		nBytesLeft = nBytesLeft - nBytesRecived;
-		*m_nReadBytes += nBytesRecived;
+		// Adding 1 because all ranges will exclude last value
+		m_nCurrentValidDataEnd = m_buffer.begin() + nBytesRecived + 1;
+
 	}
 
 	return readData;

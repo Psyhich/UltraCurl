@@ -1,5 +1,7 @@
 #include <algorithm>
 
+#include "zstd.h"
+
 #include "response.h"
 
 bool HTTP::CHTTPResponse::LoadStatusLine(std::size_t &nIndex, 
@@ -173,3 +175,37 @@ bool HTTP::CHTTPResponse::LoadHeaders(const std::vector<char> &cDataToParse) noe
 	}
 	return LoadHeaders(nCurrentIndex, cDataToParse);
 }
+
+bool HTTP::CHTTPResponse::DecompressBody() noexcept
+{
+	if(m_data.empty())
+	{
+		return false;
+	}
+
+	const size_t cnDecompressedSize = 
+		ZSTD_findFrameCompressedSize(m_data.data(), m_data.size());
+
+	if(ZSTD_isError(cnDecompressedSize))
+	{
+		fprintf(stderr, "Couldn't determine size of decompressed file: %s", ZSTD_getErrorName(cnDecompressedSize));
+		return false;
+	}
+
+	std::vector<char> decompressedData;
+	decompressedData.reserve(cnDecompressedSize);
+
+	const size_t nDecompressResult = 
+		ZSTD_decompress(decompressedData.data(), decompressedData.size(), m_data.data(), m_data.size());;;;
+
+	if(ZSTD_isError(nDecompressResult))
+	{
+		fprintf(stderr, "Couldn't decompress file: %s", ZSTD_getErrorName(nDecompressResult));
+		return false;
+	}
+
+	m_data.swap(decompressedData);
+
+	return true;
+}
+

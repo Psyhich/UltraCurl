@@ -2,20 +2,11 @@ cmake_minimum_required(VERSION 3.21)
 
 project(ultra_curl)
 
-# Command to create symlink for clangd to see all includes
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-	set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
-	execute_process(
-		COMMAND ${CMAKE_COMMAND} -E create_symlink
-			${CMAKE_BINARY_DIR}/compile_commands.json
-			${CMAKE_SOURCE_DIR}/compile_commands.json
-	)
-endif()
-
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
 # GoogleTest requires at least C++11
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 
 set(SOURCES 
 	include/base_functionality.h src/base_functionality.cpp
@@ -37,6 +28,8 @@ set(TESTS
 	tests/downloader_tests.cpp
 	include/cli_args_helper.h src/cli_args_helper.cpp # adding files which need to be tested
 	tests/test_socket.h tests/test_socket.cpp
+	tests/fake_socket.h
+	tests/pool_tests.cpp
 )
 
 # Setting flags for coverage test
@@ -56,11 +49,17 @@ find_package(Threads REQUIRED)
 add_subdirectory(lib/googletest)
 enable_testing()
 
+add_subdirectory(lib/zstd/build/cmake)
+
+
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME} PUBLIC
 	pthread
+	libzstd_static
 )
-target_include_directories(${PROJECT_NAME} PUBLIC include/)
+target_include_directories(
+	${PROJECT_NAME} PUBLIC 
+	include/ lib/zstd/lib/)
 
 add_executable(ultra_curlcli ${CLI_BUILD})
 target_link_libraries(ultra_curlcli ${PROJECT_NAME})
@@ -90,3 +89,16 @@ add_custom_command(TARGET ultra_curlcli
 					COMMAND ctest -C $<CONFIGURATION> 
 						--output-on-failure
 )
+
+# Command to create symlink for clangd to see all includes
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+	#set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+	set_target_properties(${PROJECT_NAME} tests "${PROJECT_NAME}cli" PROPERTIES EXPORT_COMPILE_COMMANDS 1)
+
+	execute_process(
+		COMMAND ${CMAKE_COMMAND} -E create_symlink
+			${CMAKE_BINARY_DIR}/compile_commands.json
+			${CMAKE_SOURCE_DIR}/compile_commands.json
+	)
+endif()
+
