@@ -54,6 +54,15 @@ APIFunctionality::ConcurrentDownloaders *APIFunctionality::WriteIntoFiles( std::
 			// We don't check for success codes to make user know about any other server states
 			if(cResponse)
 			{
+				if(const auto cEncoding = cResponse->GetHeaders().find("content-encoding");
+					cEncoding != cResponse->GetHeaders().end())
+				{
+					fprintf(stderr, "Encoding of response: %s", cEncoding->second.c_str());
+					if(cEncoding->second.find("zstd") != std::string::npos)
+					{
+						cResponse->DecompressBody();
+					}
+				}
 				pFileToWriteInto->write(cResponse->GetData().data(), cResponse->GetData().size());
 			}
 
