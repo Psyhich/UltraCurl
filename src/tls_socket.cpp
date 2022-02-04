@@ -150,6 +150,8 @@ Sockets::ReadResult Sockets::CTLSSocket::ReadTill(const std::string &csStringToR
 		{
 			nCurrentStringIndex = 0;
 		}
+		*m_nReadBytes += 1;
+		*m_nBytesToRead += 1;
 	}
 }
 Sockets::ReadResult Sockets::CTLSSocket::ReadCount(size_t nDataToRead) noexcept
@@ -168,6 +170,8 @@ Sockets::ReadResult Sockets::CTLSSocket::ReadCount(size_t nDataToRead) noexcept
 
 	char *pcStartOfWritableData = responseResult->data();
 
+	*m_nBytesToRead += nDataToRead;
+
 	while(nOveralBytesRead < nDataToRead)
 	{
 		if(BIO_read_ex(m_SSLBio.get(), pcStartOfWritableData,  
@@ -182,6 +186,8 @@ Sockets::ReadResult Sockets::CTLSSocket::ReadCount(size_t nDataToRead) noexcept
 
 		nOveralBytesRead += nBytesRead;
 		pcStartOfWritableData += nBytesRead;
+
+		*m_nReadBytes += nBytesRead;
 	}
 
 	return responseResult;
@@ -234,6 +240,9 @@ Sockets::ReadResult Sockets::CTLSSocket::ReadTillEnd() noexcept
 		responseResult->resize(nBytesGathered + BUFFER_SIZE);
 		// We should reset pointer for end of data only after resize, because data can invalidate
 		currentDataStart = responseResult->data() + nBytesGathered + 1;
+
+		*m_nBytesToRead += nBytesRead;
+		*m_nReadBytes += nBytesRead;
 	}
 
 
