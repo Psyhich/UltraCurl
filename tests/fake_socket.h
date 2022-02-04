@@ -53,7 +53,9 @@ public:
 		auto foundPair = m_router.tables.find(cURIToConnect);
 		if(foundPair == m_router.tables.end())
 		{
-			return true;
+			fprintf(stderr, 
+				"Haven't found given address in routing tables: %s\n", cURIToConnect.GetFullURI().c_str());
+			return false;
 		}
 
 		m_params = foundPair->second;
@@ -62,7 +64,7 @@ public:
 
 	std::optional<std::vector<char>> ReadTill(const std::string &csStringToReadTill) noexcept override
 	{
-		if(!m_bIsShoulRespond)
+		if(!m_bIsShouldRespond)
 		{
 			return std::nullopt;
 		}
@@ -88,7 +90,7 @@ public:
 
 	std::optional<std::vector<char>> ReadCount(size_t nCountToRead) noexcept override
 	{
-		if(!m_bIsShoulRespond || 
+		if(!m_bIsShouldRespond || 
 				m_nCurrentIndex + nCountToRead > m_params.sDataToUse.size())
 		{
 			return std::nullopt;
@@ -101,7 +103,7 @@ public:
 
 	std::optional<std::vector<char>> ReadTillEnd() noexcept override
 	{
-		if(!m_bIsShoulRespond)
+		if(!m_bIsShouldRespond)
 		{
 			return std::nullopt;
 		}
@@ -116,14 +118,14 @@ public:
 		std::string csGotData;
 		csGotData.append(pcchBytes, nCount);
 
-		m_bIsShoulRespond = CheckRequest(csGotData, m_params.sAddress, m_params.sPath);
+		m_bIsShouldRespond = CheckRequest(csGotData, m_params.sAddress, m_params.sPath);
 
-		return m_bIsShoulRespond;
+		return m_bIsShouldRespond;
 	}
 private:
 	ParametersRouter m_router;
 	BaseParams m_params;
-	bool m_bIsShoulRespond{false};
+	bool m_bIsShouldRespond{false};
 	size_t m_nCurrentIndex{0};
 };
 

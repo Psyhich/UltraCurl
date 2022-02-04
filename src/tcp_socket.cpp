@@ -1,53 +1,12 @@
-#include <arpa/inet.h>
-#include <iterator>
-#include <netinet/in.h>
-#include <netdb.h>
 #include <sys/socket.h>
-#include <cstdio>
 #include <unistd.h>
-#include <stdio.h>
 
 #include <cstring>
 #include <algorithm>
 #include <vector>
 
-#include "sockets.h"
+#include "tcp_socket.h"
 
-
-std::optional<uint16_t> Sockets::CTcpSocket::ExtractPortInByteOrder(const CURI &cURIToGetPort) noexcept
-{
-	if(const auto cPort = cURIToGetPort.GetPort())
-	{
-		return htons(*cPort);
-	}
-	return htons(80);
-}
-
-std::optional<sockaddr> Sockets::CTcpSocket::GetSocketAddress(const CURI& cURIToGetAddress) noexcept
-{
-	if(const auto cAddress = cURIToGetAddress.GetPureAddress())
-	{
-		// Setting hint to look for host(protocol, socket type and IPv4)
-		addrinfo addressHint;
-		std::memset(&addressHint, 0, sizeof(addressHint));
-		addressHint.ai_family = AF_INET;
-		addressHint.ai_socktype = SOCK_STREAM;
-		addressHint.ai_protocol = 0;
-
-		// Creating pointer for array of resolved hosts(we would need only first one)
-		addrinfo *ppResolvedHosts = nullptr;
-		if(getaddrinfo(cAddress->c_str(), HTTP_SERVICE, &addressHint, &ppResolvedHosts) != 0 || 
-			ppResolvedHosts == nullptr)
-		{
-			fprintf(stderr, "Failed to resolve given address\n");
-			return std::nullopt;
-		}
-		const sockaddr cFirstAddress = *ppResolvedHosts[0].ai_addr;
-		freeaddrinfo(ppResolvedHosts);
-		return cFirstAddress;
-	}
-	return std::nullopt;
-}
 
 void Sockets::CTcpSocket::MoveData(CTcpSocket &&socketToMove) noexcept
 {
@@ -59,7 +18,6 @@ void Sockets::CTcpSocket::MoveData(CTcpSocket &&socketToMove) noexcept
 	socketToMove.m_nReadBytes = std::nullopt;
 	socketToMove.m_iSocketFD = -1;
 }
-
 
 Sockets::CTcpSocket::CTcpSocket()
 {
@@ -94,40 +52,44 @@ bool Sockets::CTcpSocket::Connect(const CURI &cURIToConnect) noexcept
 	m_nReadBytes = 0;
 	m_nBytesToRead = 0;
 
-	// Getting address info to know which IP protocol to use
-	std::optional<sockaddr> cResolvedAddress = GetSocketAddress(cURIToConnect);
-	if(!cResolvedAddress)
-	{
-		fprintf(stderr, "Failed to resolve given address\n");
-		return false;
-	}
-
-	std::optional<uint16_t> uiPort = ExtractPortInByteOrder(cURIToConnect);
-	// If we got wrongly written port returning nullopt
-	if(!uiPort)
-	{
-		fprintf(stderr, "Given port is invalid\n");
-		return false;
-	}
+	// Extracting port from given address or using default
+	const int ciResolvedPort = 
+		htons(ExtractServicePort(cURIToConnect).value_or(80));
 	
 	// Creating socket
-	m_iSocketFD = socket(cResolvedAddress->sa_family, SOCK_STREAM, 0);
+	m_iSocketFD = socket(AF_INET, SOCK_STREAM, 0);
 	if(m_iSocketFD == -1)
 	{
 		fprintf(stderr, "Failed to create socket\n");
 		return false;
 	}
 
-	// Setting specified port for resolved address
-	sockaddr_in &address = ((sockaddr_in&)*cResolvedAddress);
-	address.sin_port = *uiPort;
-
-	if(connect(m_iSocketFD, (&*cResolvedAddress), sizeof(sockaddr)) == -1)
+	// Resolving all possble addresses for given host
+	// Trying to connect to given addresses
+	if(const auto cAddresses = GetHostAddresses(cURIToConnect))
 	{
-		fprintf(stderr, "Failed to connect to given address\n");
-		close(m_iSocketFD);
-		m_iSocketFD = -1;
-		return false;
+		bool bIsConnected{false};
+		for(addrinfo *pAddr = cAddresses->get(); 
+			pAddr != nullptr; pAddr = pAddr->ai_next)
+		{
+			sockaddr_in address = 
+				*reinterpret_cast<sockaddr_in *>(pAddr->ai_addr);
+			address.sin_port = ciResolvedPort;
+
+			if(connect(m_iSocketFD, reinterpret_cast<sockaddr*>(&address), 
+				sizeof(sockaddr)) == 0)
+			{
+				bIsConnected = true;
+				break;
+			}
+		}
+
+		if(!bIsConnected)
+		{
+			fprintf(stderr, "Failed to connect to given host\n");
+			close(m_iSocketFD);
+			return false;
+		}
 	}
 
 	return true;
@@ -303,6 +265,13 @@ bool Sockets::CTcpSocket::Write(const char *pcchBytes, size_t nCount) noexcept
 		fprintf(stderr, "The given socket doesn't exist or it's not opened\n");
 		return false;
 	}
+
+	fprintf(stderr, "Writing:\n");
+	for(size_t i = 0; i < nCount; i++)
+	{
+		fprintf(stderr, "%c", pcchBytes[i]);
+	}
+	fprintf(stderr, "\n");
 
 	size_t nBytesToSend = nCount;
 	while(nBytesToSend != 0)

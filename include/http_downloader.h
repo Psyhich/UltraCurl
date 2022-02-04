@@ -1,7 +1,9 @@
 #ifndef HTTP_DOWNLOADER_H
 #define HTTP_DOWNLOADER_H
 
+#include <algorithm>
 #include <cstddef>
+#include <memory>
 #include <string>
 #include <optional>
 #include <vector>
@@ -10,19 +12,21 @@
 
 #include "sockets.h"
 #include "response.h"
+#include "tcp_socket.h"
+#include "tls_socket.h"
 
 namespace Downloaders 
 {
 
-	///	Class responsible for downloading any given file 
-	///	using HTTP application protocol.
-	///	It can use any socket class that inherits CSocket
-	/// TODO: Add suport fot HTTPS
+	/// Class responsible for downloading any given file 
+	/// using HTTP application protocol.
+	/// It can use any socket class that inherits CSocket
 
 	class CHTTPDownloader
 	{
-	using SocketClass = std::unique_ptr<Sockets::CSocket>;
 	public:
+		using SocketClass = std::unique_ptr<Sockets::CSocket>;
+
 		CHTTPDownloader(SocketClass&& pSocketToUse) : 
 			m_pSocket{std::move(pSocketToUse)}
 		{
@@ -87,6 +91,25 @@ namespace Downloaders
 				return std::make_tuple(*readBytes, *bytesToDownload);
 			}
 			return std::nullopt;
+		}
+
+		static SocketClass ValidSocketFactory(const CURI &cURIToProcess) noexcept
+		{
+			auto sProtocol = cURIToProcess.GetProtocol();
+			if(sProtocol)
+			{
+				std::for_each(sProtocol->begin(), sProtocol->end(), 
+					[](char cChar)
+					{
+						return std::tolower(cChar);
+					});
+				if(*sProtocol == "https")
+				{
+					return std::unique_ptr<Sockets::CTLSSocket>(new Sockets::CTLSSocket());
+				}
+			}
+
+			return std::unique_ptr<Sockets::CTcpSocket>(new Sockets::CTcpSocket());
 		}
 
 	private:
