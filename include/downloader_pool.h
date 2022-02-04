@@ -11,7 +11,6 @@
 #include <atomic>
 #include <list>
 
-#include "sockets.h"
 #include "http_downloader.h"
 #include "response.h"
 #include "uri.h"

@@ -1,21 +1,20 @@
 #include <fstream>
-#include <string>
 #include <sstream>
+#include <string>
 
 #include "base_functionality.h"
-
 #include "downloader_pool.h"
 #include "http_downloader.h"
 #include "sockets.h"
 
-using HTTPTcpDownloader = Downloaders::CHTTPDownloader;
+using CConcurrentDownloader = Downloaders::Concurrency::CConcurrentDownloader;
 
-APIFunctionality::ConcurrentDownloaders *APIFunctionality::WriteIntoFiles( std::istream *const cpInputStream, 
+APIFunctionality::DownloadersPool APIFunctionality::WriteIntoFiles( std::istream *const cpInputStream, 
 	const bool cbOverwrite, unsigned uCountOfThreads, 
 	FDownloadCallback fDownloadCallback) noexcept
 {
-	ConcurrentDownloaders *downloaderPool = 
-		ConcurrentDownloaders::AllocatePool(Downloaders::CHTTPDownloader::ValidSocketFactory, uCountOfThreads);
+	DownloadersPool downloaderPool{ CConcurrentDownloader::AllocatePool(
+		Downloaders::CHTTPDownloader::ValidSocketFactory, uCountOfThreads)};
 
 	// Now reading the stream and after each \n downloading the file from URI
 	std::string sLine; 

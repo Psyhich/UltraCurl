@@ -1,7 +1,6 @@
 #include <optional>
 #include <string>
 #include <algorithm>
-#include <iostream>
 
 #include "test_socket.h"
 

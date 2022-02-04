@@ -16,6 +16,7 @@ set(SOURCES
 	include/uri.h src/uri.cpp
 	include/tls_socket.h src/tls_socket.cpp
 	include/tcp_socket.h src/tcp_socket.cpp
+	include/network_socket.h src/network_socket.cpp
 	include/sockets.h
 )
 set(CLI_BUILD 

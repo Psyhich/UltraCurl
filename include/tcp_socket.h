@@ -3,11 +3,11 @@
 
 #include <netdb.h>
 
-#include "sockets.h"
+#include "network_socket.h"
 
 namespace Sockets
 {
-	class CTcpSocket : public CSocket
+	class CTcpSocket : public CNetworkSocket
 	{
 	public:
 		explicit CTcpSocket();

@@ -10,11 +10,9 @@
 #include <map>
 #include <numeric>
 
-#include <iostream>
-
 #include "sockets.h"
-#include "tcp_socket.h"
 #include "response.h"
+#include "tcp_socket.h"
 #include "tls_socket.h"
 
 namespace Downloaders 
@@ -98,6 +96,18 @@ namespace Downloaders
 		static SocketClass ValidSocketFactory(const CURI &cURIToProcess) noexcept
 		{
 			auto sProtocol = cURIToProcess.GetProtocol();
+			if(sProtocol)
+			{
+				std::for_each(sProtocol->begin(), sProtocol->end(), 
+					[](char cChar)
+					{
+						return std::tolower(cChar);
+					});
+				if(*sProtocol == "https")
+				{
+					return std::unique_ptr<Sockets::CTLSSocket>(new Sockets::CTLSSocket());
+				}
+			}
 
 			return std::unique_ptr<Sockets::CTcpSocket>(new Sockets::CTcpSocket());
 		}
@@ -162,7 +172,6 @@ namespace Downloaders
 
 			if(!response.LoadHeaders(*cHeaderResponse))
 			{
-				std::cout.write(cHeaderResponse->data(), cHeaderResponse->size());
 				fprintf(stderr, "Failed to parse server response\n");
 				return false;
 			}
@@ -194,14 +203,12 @@ namespace Downloaders
 			if(cTransferEncoding != cResponseHeaders.end() && 
 				cTransferEncoding->second == "chunked")
 			{
-				fprintf(stderr, "Reading by chunks\n");
 				possiblyReadData = ReadByChunks();
 				bIsReadData = true;
 			}
 			// Check for content length
 			else if(cContentLengthHeader != cResponseHeaders.end())
 			{
-				fprintf(stderr, "Reading by content-length\n");
 				// Parsing bytes count value
 				std::size_t nBytesCount{0};
 				std::size_t nNumberEndPosition{0}; // Will be changed by stoull
@@ -224,7 +231,6 @@ namespace Downloaders
 			// Trying to read all data till end of connection
 			else
 			{
-				fprintf(stderr, "Reading till end\n");
 				possiblyReadData = m_pSocket->ReadTillEnd();
 				bIsReadData = true;
 			}

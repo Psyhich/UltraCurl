@@ -60,7 +60,7 @@ int main(int iArgc, char *argv[]) {
 		const bool cbShouldOverwrite = 
 			cParamaters.CheckIfParameterExist("f") || cParamaters.CheckIfParameterExist("force");
 
-		APIFunctionality::ConcurrentDownloaders *downloaders = 
+		APIFunctionality::DownloadersPool downloaders = 
 			APIFunctionality::WriteIntoFiles(pInputStream, cbShouldOverwrite, uCountOfThreads, 
 			[](const CURI &, std::optional<HTTP::CHTTPResponse>) {});
 
