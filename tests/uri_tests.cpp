@@ -4,7 +4,38 @@
 
 #include "uri.h"
 
-// TODO: DONT'T FORGET TO ADD TESTS FOR HEX ENCODING OF PATH AND QUERY!!!!!!!!!!!!!!!!!!!
+TEST(URIParsingTest, ProtocolParrsingTest)
+{
+	std::string address = "some-proto://site.com:899?q=Cool+films";
+	CURI addressURI(address);
+
+	ASSERT_STREQ(addressURI.GetProtocol()->c_str(), "some-proto");
+	
+	address = "some-proto://site.com:899?q=Cool+films";
+	addressURI = address;
+
+	ASSERT_STREQ(addressURI.GetProtocol()->c_str(), "some-proto");
+	
+	address = "site.com:899?q=Cool+films";
+	addressURI = address;
+
+	ASSERT_EQ(addressURI.GetProtocol(), std::nullopt);
+	
+	address = "http//site.com:899?q=Cool+films";
+	addressURI = address;
+
+	ASSERT_EQ(addressURI.GetProtocol(), std::nullopt);
+	
+	address = "url:://site.com";
+	addressURI = address;
+
+	ASSERT_EQ(addressURI.GetProtocol(), std::nullopt);
+	
+	address = "u,rl://site.com";
+	addressURI = address;
+
+	ASSERT_EQ(addressURI.GetProtocol(), std::nullopt);
+}
 
 TEST(URIParsingTest, AddressParsingTest)
 {
@@ -70,39 +101,6 @@ TEST(URIParsingTest, PortParssingTest)
 	ASSERT_EQ(addressURI.GetPort(), std::nullopt);
 }
 
-TEST(URIParsingTest, ProtocolParrsingTest)
-{
-	std::string address = "some-proto://site.com:899?q=Cool+films";
-	CURI addressURI(address);
-
-	ASSERT_STREQ(addressURI.GetProtocol()->c_str(), "some-proto");
-	
-	address = "some-proto://site.com:899?q=Cool+films";
-	addressURI = address;
-
-	ASSERT_STREQ(addressURI.GetProtocol()->c_str(), "some-proto");
-	
-	address = "site.com:899?q=Cool+films";
-	addressURI = address;
-
-	ASSERT_EQ(addressURI.GetProtocol(), std::nullopt);
-	
-	address = "http//site.com:899?q=Cool+films";
-	addressURI = address;
-
-	ASSERT_EQ(addressURI.GetProtocol(), std::nullopt);
-	
-	address = "url:://site.com";
-	addressURI = address;
-
-	ASSERT_EQ(addressURI.GetProtocol(), std::nullopt);
-	
-	address = "u,rl://site.com";
-	addressURI = address;
-
-	ASSERT_EQ(addressURI.GetProtocol(), std::nullopt);
-}
-
 TEST(URIParsingTest, PathParsingTest)
 {
 	std::string address = "some-proto://site.com:899/some/random/path/page.html?q=Cool+films";
@@ -134,4 +132,56 @@ TEST(URIParsingTest, PathParsingTest)
 	addressURI = address;
 
 	ASSERT_EQ(addressURI.GetPath(), std::nullopt);
+}
+
+TEST(URIParsingTest, QueryParsingTest)
+{
+	CURI URIToParse("some-proto://site.com:899/some/random/path/page.html?q=Cool+films");
+
+	auto sQuery = URIToParse.GetQuery();
+	ASSERT_STREQ(sQuery->c_str(), "q=Cool+films");
+
+	URIToParse = CURI("some-proto://site.com/?q=Cute+kitties#kittie_1");
+	sQuery = URIToParse.GetQuery();
+	ASSERT_STREQ(sQuery->c_str(), "q=Cute+kitties");
+
+	URIToParse = CURI("rand-proto://www.www.www.www.page.cool.name.org?login=admin;password=admin#logon_page");
+	sQuery = URIToParse.GetQuery();
+	ASSERT_STREQ(sQuery->c_str(), "login=admin;password=admin");
+
+	URIToParse = CURI("rand-proto://www.www.www.www.page.cool.name.org?#logon_page");
+	sQuery = URIToParse.GetQuery();
+	ASSERT_EQ(sQuery, std::nullopt);
+
+	URIToParse = CURI("rand-proto://www.www.www.www.page.cool.name.org");
+	sQuery = URIToParse.GetQuery();
+	ASSERT_EQ(sQuery, std::nullopt);
+}
+
+TEST(URIParsingTest, FragmentParsingTest)
+{
+	CURI URIToParse("some-proto://site.com:899/some/random/path/page.html#page_1");
+
+	auto sFragment = URIToParse.GetFragment();
+	ASSERT_STREQ(sFragment->c_str(), "page_1");
+
+	URIToParse = CURI("some-proto://site.com/?q=Cute+kitties#kittie_1");
+	sFragment = URIToParse.GetFragment();
+	ASSERT_STREQ(sFragment->c_str(), "kittie_1");
+
+	URIToParse = CURI("rand-proto://www.www.www.www.page.cool.name.org?login=admin;password=admin#logon_page");
+	sFragment = URIToParse.GetFragment();
+	ASSERT_STREQ(sFragment->c_str(), "logon_page");
+
+	URIToParse = CURI("rand-proto://www.www.www.www.page.cool.name.org?login=admin;password=admin");
+	sFragment = URIToParse.GetFragment();
+	ASSERT_EQ(sFragment, std::nullopt);
+
+	URIToParse = CURI("rand-proto://www.www.www.www.page.cool.name.org");
+	sFragment = URIToParse.GetFragment();
+	ASSERT_EQ(sFragment, std::nullopt);
+
+	URIToParse = CURI("rand-proto://www.www.www.www.page.cool.name.org#");
+	sFragment = URIToParse.GetFragment();
+	ASSERT_EQ(sFragment, std::nullopt);
 }

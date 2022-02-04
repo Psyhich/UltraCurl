@@ -25,6 +25,8 @@ void PrintUsage(const std::string &name);
 bool GetStreams(std::istream *&pInputStream, std::ostream *&pOutputStream, 
 	const CLI::CCLIArgsHelper &cParameters) noexcept;
 
+static const constexpr int REFRESH_MILISIECONDS{100};
+
 int main(int iArgc, char *argv[]) {
 	const CLI::CCLIArgsHelper cParamaters{iArgc, argv};
 
@@ -72,7 +74,7 @@ int main(int iArgc, char *argv[]) {
 			progessPrinter.PrintProgress(progressData);
 
 			progessPrinter.Refresh();
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			std::this_thread::sleep_for(std::chrono::milliseconds(REFRESH_MILISIECONDS));
 			progressData = downloaders.GetDownloadProgres();
 		}
 	}

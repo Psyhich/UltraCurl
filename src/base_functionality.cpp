@@ -8,7 +8,7 @@
 #include "http_downloader.h"
 #include "sockets.h"
 
-using HTTPTcpDownloader = Downloaders::CHTTPDownloader<Sockets::CTcpSocket>;
+using HTTPTcpDownloader = Downloaders::CHTTPDownloader;
 
 APIFunctionality::ConcurrentDownloaders APIFunctionality::WriteIntoFiles( std::istream *const cpInputStream, 
 	const bool cbOverwrite, unsigned uCountOfThreads, 
@@ -89,7 +89,8 @@ void APIFunctionality::WriteIntoStream(std::istream *const cpInputStream, std::o
 			continue;
 		}
 
-		HTTPTcpDownloader downloader;
+		Downloaders::CHTTPDownloader downloader
+			{std::unique_ptr<Sockets::CTcpSocket>(new Sockets::CTcpSocket())};
 		if(const auto cResponse = downloader.Download(cPageURI))
 		{
 			cpOutputStream->write(cResponse->GetData().data(), cResponse->GetData().size());

@@ -1,6 +1,11 @@
+#include <optional>
+#include <string>
+#include <algorithm>
+#include <iostream>
+
 #include "test_socket.h"
 
-bool BaseParams::CheckRequest(const std::string &sRequest)
+bool CheckRequest(const std::string &sRequest, const std::string& sAddress, const std::string &sPath)
 {
 	// Request should have Host, Accept and Accept-Encoding headers
 	// It should end with \r\n\r\n, each header ends with \r\n

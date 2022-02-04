@@ -1,7 +1,10 @@
+#include <algorithm>
 #include <exception>
 #include <stdexcept>
 
 #include "uri.h"
+
+const std::string CURI::sProtocolSeparator{"://"};
 
 CURI::CURI(const std::string& cStringToSet) : m_originalString{cStringToSet}
 {
@@ -9,129 +12,81 @@ CURI::CURI(const std::string& cStringToSet) : m_originalString{cStringToSet}
 
 std::optional<std::string> CURI::GetProtocol() const noexcept
 {
-	std::size_t nProtocolLength = 0;
-	// Looking for :// pattern
-	// Starting from 2 because length of :// pattern is 3
-	for(std::size_t nIndex = 2; nIndex < m_originalString.size(); nIndex++)
-	{
-		if(m_originalString[nIndex] == '/' && m_originalString[nIndex - 1] == '/' &&
-			m_originalString[nIndex - 2] == ':')
-		{
-			nProtocolLength = nIndex - 2;
-			break;
-		}
-	}
+	const std::size_t cnProtocolEnd = m_originalString.find(sProtocolSeparator);
 
-	if(nProtocolLength == 0)
+	if(cnProtocolEnd == std::string::npos ||
+		!std::all_of(m_originalString.begin(), m_originalString.begin() + cnProtocolEnd, 
+		CanBeUsedInProtocol))
 	{
 		return std::nullopt;
 	}
-	else 
-	{
 
-
-		for(std::size_t nIndex = 0; nIndex < nProtocolLength; nIndex++)
-		{
-			if(!CanBeUsedInProtocol(m_originalString[nIndex]))
-			{
-				return std::nullopt;
-			}
-		}
-		return m_originalString.substr(0, nProtocolLength);
-	}
+	return m_originalString.substr(0, cnProtocolEnd);
 }
 
 std::optional<std::string> CURI::GetPureAddress() const noexcept
 {
 	// We should take in mind protocol and port, ideally address can end with / ? #
-	std::size_t nAddressStart = 0;
-	std::size_t nAddressEnd = 0;
-	
 	// Checking for protocol start
-	for (std::size_t nIndex = 2; nIndex < m_originalString.size(); nIndex++) {
-		const char &cchCurrentChar = m_originalString[nIndex];
-		if(cchCurrentChar == '/' && m_originalString[nIndex - 1] == '/' &&
-			m_originalString[nIndex - 2] == ':')
-		{
-			nAddressStart = nIndex + 1;
-			break;
-		}
-	}
-	// Checking for address end(: # ? / chars) adfter protocol(if found)
-	for(std::size_t nIndex = nAddressStart; nIndex < m_originalString.size() + 1; nIndex++)
+	auto addressStart = m_originalString.begin(); 
+	const std::size_t protocolStart{m_originalString.find(sProtocolSeparator)};
+	if(protocolStart != std::string::npos)
 	{
-		const char &cchCurrentChar = m_originalString.c_str()[nIndex];
-		if(cchCurrentChar == '/' || cchCurrentChar == '#' ||
-			cchCurrentChar == '?' || cchCurrentChar == ':' ||
-			cchCurrentChar == '\0')
-		{
-			nAddressEnd = nIndex;
-			break;
-		}
+		std::advance(addressStart, protocolStart + sProtocolSeparator.size());
 	}
 
-	if(nAddressEnd <= nAddressStart)
-	{
-		return std::nullopt;
-	}
+	// Checking for address end
+	auto addressEnd = std::find_first_of(addressStart, m_originalString.end(), 
+		POSSIBLE_ADDRESS_END.begin(), POSSIBLE_ADDRESS_END.end());
 
-	return m_originalString.substr(nAddressStart, nAddressEnd - nAddressStart);
+	return std::string{addressStart, addressEnd};
 }
 
 std::optional<int> CURI::GetPort() const noexcept
 {
 	// Port specified between ':' and '#' '?' '/' chars
 	// Also we should omit protocol specifier ://
-	std::size_t nPortStartPos = 0;
-	std::size_t nPortEndPos = 0;
-
-	// Checking for port start and excluding protocol
-	// Creating only one loop would produce a lot of ifs
-	for (std::size_t nIndex = 0; nIndex < m_originalString.size(); nIndex++) {
-		const char &cchCurrentChar = m_originalString[nIndex];
-		if(nIndex < m_originalString.size() - 4 && 
-			cchCurrentChar == ':' && 
-			m_originalString[nIndex + 1] != '/' &&
-			m_originalString[nIndex + 2] != '/')
-		{
-			nPortStartPos = nIndex + 1;
-			break;
-		}	
+	auto portStartPos = m_originalString.begin();
+	// Omiting ://
+	if(const std::size_t cnProtocolStart = m_originalString.find(sProtocolSeparator); 
+		cnProtocolStart != std::string::npos)
+	{
+		std::advance(portStartPos, cnProtocolStart + sProtocolSeparator.size());
 	}
 
+	// Looking for port start
+	portStartPos = std::find(portStartPos, m_originalString.end(), ':');
+
 	// If we didn't find port, assuming it's 80
-	if(nPortStartPos == 0)
+	if(portStartPos == m_originalString.end())
 	{
 		return 80;
 	}
+	// If we find port, skip ':'
+	++portStartPos;
 
 	// Now looking for port end
-	for(std::size_t nIndex = nPortStartPos; nIndex < m_originalString.size() + 1; nIndex++)
-	{
-		const char &cchCurrentChar = m_originalString.c_str()[nIndex];
-		if(cchCurrentChar == '/' || cchCurrentChar == '#' ||
-			cchCurrentChar == '?' || cchCurrentChar == '\0')
-		{
-			nPortEndPos = nIndex;
-			break;
-		}
-	}
-	if(nPortEndPos == nPortStartPos)
-	{
-		return std::nullopt;
-	}
-	std::string cStringPort = m_originalString.substr(nPortStartPos, nPortEndPos - nPortStartPos);
-	
+	auto portEndPos = std::find_first_of(portStartPos, m_originalString.end(), 
+		POSSIBLE_PORT_END.begin(), POSSIBLE_PORT_END.end());
+
+	const std::string csStringPort{portStartPos, portEndPos};
+	// Checking if given port is valid
 	try {
-		const int ciParsedNumber = std::stoi(cStringPort.c_str());
-		if(ciParsedNumber > 65535) // This is larges port number
+		std::size_t nLastParsedCharIndex{0};
+		const int ciParsedNumber = std::stoi(csStringPort.c_str(), &nLastParsedCharIndex);
+	
+		// This is largest port number
+		// For better safety checking if last parsed char is last in string, if not we have string like: "1234asd"
+		if(ciParsedNumber > 65535 || 
+			nLastParsedCharIndex != csStringPort.size()) 
 		{
 			return std::nullopt;
 		}
 		return ciParsedNumber;
+	}
 	// std::stoi can throw invalid_argument or out_of_range, 
-	// So catching any exception
-	} catch(const std::exception &err)
+	// So catching any exceptions
+	catch(...)
 	{
 		return std::nullopt;
 	}
@@ -140,55 +95,79 @@ std::optional<int> CURI::GetPort() const noexcept
 
 std::optional<std::filesystem::path> CURI::GetPath() const noexcept
 {
-	std::size_t nPathStart = 0;
-	for(std::size_t nIndex = 0; nIndex < m_originalString.size(); nIndex++)
+	auto pathStartPos = m_originalString.begin();
+	// Omiting ://
+	if(const std::size_t cnProtocolStart = m_originalString.find(sProtocolSeparator); 
+		cnProtocolStart != std::string::npos)
 	{
-		// We should take in mind that after protocol we also have ://
-		const char& cchCurrentChar = m_originalString[nIndex];
-		if(cchCurrentChar == '/')
-		{
-			nPathStart = nIndex;
-			break;
-		} else if(nIndex < m_originalString.size() - 3 && 
-			cchCurrentChar == ':' && 
-			m_originalString[nIndex + 1] == '/' &&
-			m_originalString[nIndex + 2] == '/')
-		{
-			// Skipping :// part
-			// Will skip :/ and in the end of cycle we will skip last /
-			nIndex += 2; 
-		}
+		std::advance(pathStartPos, cnProtocolStart + sProtocolSeparator.size());
 	}
 
-	// Path cannot begin in 0 index because it should start with '/'
-	if(nPathStart == 0)
+	// Checking for path start
+	pathStartPos = std::find(pathStartPos, m_originalString.end(), '/');
+	if(pathStartPos == m_originalString.end())
 	{
 		return std::nullopt;
 	}
+	
+	auto pathEndPos = std::find_first_of(pathStartPos, m_originalString.end(), 
+		POSSIBLE_PATH_END.begin(), POSSIBLE_PATH_END.end());
 
-	// Looking for path end(\0 ? #)
-	std::size_t nPathEnd = 0;
-	for(std::size_t nIndex = nPathStart; nIndex < m_originalString.size() + 1; nIndex++)
-	{
-		const char& cchCurrentChar = m_originalString.c_str()[nIndex];
-		if(cchCurrentChar == '#' || cchCurrentChar == '?' || cchCurrentChar == '\0')
-		{
-			nPathEnd = nIndex;
-			break;
-		}
-	}
 	// taking in mind zero path(proto://some.page.com/)
-	if(nPathEnd - nPathStart <= 1)
+	if(std::distance(pathStartPos, pathEndPos) <= 1)
 	{
 		return std::nullopt;
 	}
 
-	return 
-		std::filesystem::path(m_originalString.substr(nPathStart, nPathEnd - nPathStart));
+	return std::filesystem::path(std::string{pathStartPos, pathEndPos});
 }
 
+std::optional<std::string> CURI::GetQuery() const noexcept
+{
+	auto queryStart = std::find(m_originalString.begin(), m_originalString.end(), '?');
+
+	if(queryStart == m_originalString.end())
+	{
+		return std::nullopt;
+	}
+	//
+	// Skipping '?'
+	++queryStart;
+
+	auto queryEnd = std::find(queryStart, m_originalString.end(), '#');
+
+	// Checking if it's not empty
+	if(std::distance(queryStart, queryEnd) == 0)
+	{
+		return std::nullopt;
+	}
+
+	return std::string{queryStart, queryEnd};
+}
+
+std::optional<std::string> CURI::GetFragment() const noexcept
+{
+	auto fragmentStart = std::find(m_originalString.begin(), m_originalString.end(), '#');
+
+	if(fragmentStart == m_originalString.end())
+	{
+		return std::nullopt;
+	}
+	// Skipping '#'
+	++fragmentStart;
+
+	if(std::distance(fragmentStart, m_originalString.end()) == 0)
+	{
+		return std::nullopt;
+	}
+	return std::string{fragmentStart, m_originalString.end()};
+}
 
 bool operator<(const CURI& cLURIToCompare, const CURI &cRURIToCompare) noexcept
 {
 	return cLURIToCompare.m_originalString < cRURIToCompare.m_originalString;
+}
+bool operator==(const CURI& cLURIToCompare, const CURI &cRURIToCompare) noexcept
+{
+	return cLURIToCompare.m_originalString == cRURIToCompare.m_originalString;
 }
