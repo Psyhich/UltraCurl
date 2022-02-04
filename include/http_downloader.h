@@ -127,6 +127,7 @@ namespace Downloaders
 			}
 			headers.insert({std::string("Accept"), std::string("*/*")});
 			headers.insert({std::string("Accept-Encoding"), std::string("identity, zstd")});
+			headers.insert({std::string("User-Agent"), std::string("ultracurl/0.1")});
 			
 			// Forming request
 			// Getting path

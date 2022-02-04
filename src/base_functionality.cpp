@@ -56,7 +56,6 @@ APIFunctionality::DownloadersPool APIFunctionality::WriteIntoFiles( std::istream
 				if(const auto cEncoding = cResponse->GetHeaders().find("content-encoding");
 					cEncoding != cResponse->GetHeaders().end())
 				{
-					fprintf(stderr, "Encoding of response: %s", cEncoding->second.c_str());
 					if(cEncoding->second.find("zstd") != std::string::npos)
 					{
 						cResponse->DecompressBody();
