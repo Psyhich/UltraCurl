@@ -73,17 +73,17 @@ TEST(URIParsingTest, PortParssingTest)
 	address = "default.proto.test.com#some_div";
 	addressURI = address;
 
-	ASSERT_EQ(*addressURI.GetPort(), 80);
+	ASSERT_EQ(addressURI.GetPort(), std::nullopt);
 
 	address = "default.proto.test.com?q=some_div";
 	addressURI = address;
 
-	ASSERT_EQ(*addressURI.GetPort(), 80);
+	ASSERT_EQ(addressURI.GetPort(), std::nullopt);
 
 	address = "default.proto.test.com";
 	addressURI = address;
 
-	ASSERT_EQ(*addressURI.GetPort(), 80);
+	ASSERT_EQ(addressURI.GetPort(), std::nullopt);
 
 	address = "default.proto.test.com:1000#some_div";
 	addressURI = address;

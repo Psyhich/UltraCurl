@@ -1,9 +1,8 @@
 #include <gtest/gtest.h>
 
 #include "downloader_pool.h"
+#include "uri.h"
 #include "fake_socket.h"
-
-template<class SocketClass> using Downloader = Downloaders::Concurrency::CConcurrentDownloader<RouterSocket<SocketClass>>;
 
 TEST(DownloaderPoolTests, BaseWorkingTests)
 {
@@ -74,7 +73,13 @@ TEST(DownloaderPoolTests, BaseWorkingTests)
 		}
 	} router;
 
-	Downloader<TestRouter> *concurentDownloader = Downloader<TestRouter>::AllocatePool(2);
+	Downloaders::Concurrency::CConcurrentDownloader *concurentDownloader = 
+		Downloaders::Concurrency::CConcurrentDownloader::AllocatePool(
+		[](const CURI &)
+		{
+			return std::unique_ptr<RouterSocket<TestRouter>>(new RouterSocket<TestRouter>());
+		},
+		2);
 
 	std::map<CURI, std::vector<char>> realResults;
 	

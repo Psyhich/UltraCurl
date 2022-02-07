@@ -4,3 +4,6 @@
 [submodule "lib/zstd"]
 	path = lib/zstd
 	url = https://github.com/facebook/zstd
+[submodule "lib/openssl-cmake"]
+	path = lib/openssl-cmake
+	url = https://github.com/janbar/openssl-cmake
