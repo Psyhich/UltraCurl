@@ -73,38 +73,35 @@ void CLI::CCLIProgressPrinter::PrintProgress(
 		// Adding space in the end to split value from itself when we shifted it fully
 		adressWithPath.push_back(' ');
 		// Shifting addres
-		// Calculating overflow, because for all addresses I use one shit value
+		// Calculating overflow, because for all addresses I use one shift value
 		auto addressIter = adressWithPath.begin();
 		std::advance(addressIter, m_nCycleProgress % adressWithPath.size());
 		std::rotate(adressWithPath.begin(), addressIter, adressWithPath.end());
 
-		// Clipping address to fit to URI cell
-		// if string is bigger than SIZE_OF_URI splitting to fit into URI
-		if(adressWithPath.size() > SIZE_OF_URI_CELL)
+		// Printing address to fit to SIZE_OF_URI_CELL
+		putchar('|');
+		for(size_t nIndex = 0; nIndex < SIZE_OF_URI_CELL; nIndex++)
 		{
-			adressWithPath = adressWithPath.substr(0, SIZE_OF_URI_CELL);
-		}
-		// If lesser adding spaces in the end
-		else
-		{
-			for(std::size_t nCount = 0; nCount < SIZE_OF_URI_CELL; nCount++)
+			if(nIndex < adressWithPath.size())
 			{
-				adressWithPath.push_back(' ');
+				putchar(adressWithPath[nIndex]);
+			}
+			else
+			{
+				putchar(' ');
 			}
 		}
-		// Printing address
-		printf("|%s|", adressWithPath.c_str());
+		putchar('|');
 
 		// Transforming bytes count into kilo, mega, giga, or petabytes representation
-		double dBytesRecieved = std::get<0>(progress);
-		const char cRecievedUnit = ReduceUnit(dBytesRecieved);
-		// Printing recieved bytes
-		PrintBytesCell(dBytesRecieved, cRecievedUnit);
+		double dBytes = std::get<0>(progress);
+		char cUnit = ReduceUnit(dBytes);
+		PrintBytesCell(dBytes, cUnit);
 		
-		double dBytesDownload = std::get<1>(progress);
-		const char cSizeUnit = ReduceUnit(dBytesDownload);
-		PrintBytesCell(dBytesDownload, cSizeUnit);
-		printf("\n");
+		dBytes = std::get<1>(progress);
+		cUnit = ReduceUnit(dBytes);
+		PrintBytesCell(dBytes, cUnit);
+		putchar('\n');
 	}
 
 }

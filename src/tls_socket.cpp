@@ -285,7 +285,10 @@ void Sockets::CTLSSocket::InitOpenSSLLib() noexcept
 	OpenSSL_add_all_algorithms();
 	OpenSSL_add_all_ciphers();
 	OpenSSL_add_all_digests();
+
+	#ifdef DEBUG 
 	SSL_load_error_strings();
+	#endif
 }
 
 
