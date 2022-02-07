@@ -188,26 +188,93 @@ bool HTTP::CHTTPResponse::DecompressBody() noexcept
 	}
 
 	const size_t cnDecompressedSize = 
-		ZSTD_findFrameCompressedSize(m_data.data(), m_data.size());
+		ZSTD_getFrameContentSize(m_data.data(), m_data.size());
 
-	if(ZSTD_isError(cnDecompressedSize))
+	if(cnDecompressedSize == ZSTD_CONTENTSIZE_ERROR)
 	{
 		fprintf(stderr, "Couldn't determine size of decompressed file: %s", ZSTD_getErrorName(cnDecompressedSize));
 		return false;
 	}
 
+	// We have split in here: we can decompress file using streams or using full decompress function
+	// This will be based on fact if we can determine size of decompressed file
 	std::vector<char> decompressedData;
-	decompressedData.reserve(cnDecompressedSize);
-
-	const size_t nDecompressResult = 
-		ZSTD_decompress(decompressedData.data(), decompressedData.size(), m_data.data(), m_data.size());;;;
-
-	if(ZSTD_isError(nDecompressResult))
+	if(cnDecompressedSize == ZSTD_CONTENTSIZE_UNKNOWN)
 	{
-		fprintf(stderr, "Couldn't decompress file: %s", ZSTD_getErrorName(nDecompressResult));
-		return false;
-	}
+		// Context object for decompression
+		ZSTD_DCtx* const decompressionContext = ZSTD_createDCtx();
 
+		// if have't determined the size, we should use streams
+		// We should feed data from m_data into ZSTD_decompressStream by chunk specified in ZSTD_DStreamInSize
+		// And monitor how much data we can write to decompressedData at once
+		const size_t cnInputStreamSize = ZSTD_DStreamInSize();
+		const size_t cnOutputStreamSize = ZSTD_DStreamInSize();
+
+		size_t nCurrentReadPosition{0};
+		size_t nLastReturn{0};
+		size_t nLastWritePosition{0};
+
+		while(nCurrentReadPosition < m_data.size())
+		{
+			decompressedData.resize(decompressedData.size() + cnOutputStreamSize + 1);
+
+			ZSTD_inBuffer inputBuffer = 
+				{ 
+					m_data.data() + nCurrentReadPosition, // Position to read from
+					nCurrentReadPosition + cnInputStreamSize >= m_data.size() ? 
+						m_data.size() - nCurrentReadPosition : cnInputStreamSize, // Length of chunk
+					0 // Current position in array
+				};
+			while(inputBuffer.pos < inputBuffer.size)
+			{
+				ZSTD_outBuffer outputBuffer = 
+					{ 
+						decompressedData.data(),
+						cnOutputStreamSize, 
+						decompressedData.size() - cnOutputStreamSize
+					};
+
+				const size_t nResult = 
+					ZSTD_decompressStream(decompressionContext, &outputBuffer, &inputBuffer);
+				if(ZSTD_isError(nResult))
+				{
+					fprintf(stderr, "Failed to process decompressing\n");
+					return false;
+				}
+				nLastReturn = nResult;
+				nLastWritePosition = outputBuffer.pos;
+			}
+			nCurrentReadPosition += cnInputStreamSize;
+		}
+		
+		// Truncating data if we allocated to much
+		decompressedData.resize(nLastWritePosition);
+		
+
+		// Checking if last return was 0 which means 
+		// that there are no need to load  more data
+		if(nLastReturn != 0)
+		{
+			fprintf(stderr, "Given input is truncated\n");
+			return false;
+		}
+
+		ZSTD_freeDCtx(decompressionContext);
+	}
+	// decompressing using one function if we determined size
+	else
+	{
+		decompressedData.reserve(cnDecompressedSize);
+
+		const size_t nDecompressResult = 
+			ZSTD_decompress(decompressedData.data(), decompressedData.size(), m_data.data(), m_data.size());
+
+		if(ZSTD_isError(nDecompressResult))
+		{
+			fprintf(stderr, "Couldn't decompress file: %s", ZSTD_getErrorName(nDecompressResult));
+			return false;
+		}
+	}
 	m_data.swap(decompressedData);
 
 	return true;
