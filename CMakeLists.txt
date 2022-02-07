@@ -88,6 +88,7 @@ include(GoogleTest)
 gtest_discover_tests(tests)
 
 # Automaticaly running all tests on build
+add_dependencies(ultra_curlcli tests)
 add_custom_command(TARGET ultra_curlcli
 					POST_BUILD
 					COMMAND ctest -C $<CONFIGURATION> 
