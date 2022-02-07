@@ -53,7 +53,7 @@ add_subdirectory(lib/zstd/build/cmake)
 add_subdirectory(lib/openssl-cmake)
 
 
-add_library(${PROJECT_NAME} STATIC ${SOURCES})
+add_library(ultra_curl STATIC ${SOURCES})
 target_link_libraries(${PROJECT_NAME} PUBLIC
 	pthread
 	ssl
@@ -94,16 +94,16 @@ add_custom_command(TARGET ultra_curlcli
 
 # Making all warnings errors and turning on pedantic feature in GCC
 if(MSVC)
-	target_compile_options(${PROJECT_NAME}
+	target_compile_options(ultra_curl
 		PRIVATE "/W4" "/WX")
-	target_compile_options("${PROJECT_NAME}cli"
+	target_compile_options(ultra_curlcli
 		PRIVATE "/W4" "/WX")
 	target_compile_options(tests
 		PRIVATE "/W4" "/WX")
 else()
-	target_compile_options(${PROJECT_NAME}
+	target_compile_options(ultra_curl
 		PRIVATE "-Wall" "-Wextra" "-Wpedantic" "-Werror")
-	target_compile_options("${PROJECT_NAME}cli"
+	target_compile_options(ultra_curlcli
 		PRIVATE "-Wall" "-Wextra" "-Wpedantic" "-Werror")
 	target_compile_options(tests
 		PRIVATE "-Wall" "-Wextra" "-Wpedantic" "-Werror")
@@ -112,7 +112,7 @@ endif()
 # Command to create symlink for clangd to see all includes
 if(CMAKE_BUILD_TYPE MATCHES Debug)
 	#set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
-	set_target_properties(${PROJECT_NAME} tests "${PROJECT_NAME}cli" PROPERTIES EXPORT_COMPILE_COMMANDS 1)
+	set_target_properties(ultra_curl tests ultra_curlcli PROPERTIES EXPORT_COMPILE_COMMANDS 1)
 
 	execute_process(
 		COMMAND ${CMAKE_COMMAND} -E create_symlink
@@ -120,4 +120,3 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 			${CMAKE_SOURCE_DIR}/compile_commands.json
 	)
 endif()
-
