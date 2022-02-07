@@ -54,14 +54,16 @@ add_subdirectory(lib/openssl-cmake)
 
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
-target_link_libraries(${PROJECT_NAME} PUBLIC
+target_link_libraries(${PROJECT_NAME} 
+	PRIVATE
 	pthread
 	ssl
 	libzstd_shared
 )
 target_include_directories(
-	${PROJECT_NAME} PUBLIC 
-	include/ lib/zstd/lib/)
+	${PROJECT_NAME} 
+	PUBLIC include/ 
+	PRIVATE lib/zstd/lib/)
 
 add_executable(ultra_curlcli ${CLI_BUILD})
 target_link_libraries(ultra_curlcli ${PROJECT_NAME})
@@ -111,7 +113,6 @@ endif()
 
 # Command to create symlink for clangd to see all includes
 if(CMAKE_BUILD_TYPE MATCHES Debug)
-	#set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 	set_target_properties(${PROJECT_NAME} tests "${PROJECT_NAME}cli" PROPERTIES EXPORT_COMPILE_COMMANDS 1)
 
 	execute_process(
