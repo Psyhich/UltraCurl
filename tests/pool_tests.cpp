@@ -73,7 +73,7 @@ TEST(DownloaderPoolTests, BaseWorkingTests)
 		}
 	} router;
 
-	Downloaders::Concurrency::CConcurrentDownloader *concurentDownloader = 
+	auto concurentDownloader = 
 		Downloaders::Concurrency::CConcurrentDownloader::AllocatePool(
 		[](const CURI &)
 		{
