@@ -35,10 +35,6 @@ set(TESTS
 	tests/pool_tests.cpp
 )
 
-# Setting flags for coverage test
-set(CMAKE_CXX_FLAGS_DEBUG " -g -O0 -fprofile-arcs -ftest-coverage ${CMAKE_C_FLAGS_DEBUG}")
-set(CMAKE_C_FLAGS_DEBUG " -g -O0 -fprofile-arcs -ftest-coverage ${CMAKE_C_FLAGS_DEBUG}")
-
 # Ensuring all third party libs will be builded in shared state
 SET(BUILD_SHARED_LIBS true)
 
@@ -78,9 +74,18 @@ target_link_libraries( tests
 	pthread # Needed for gtest
 	${PROJECT_NAME} # My test files
 )
+
 if(CMAKE_COMPILER_IS_GNUCXX)
-	include(CodeCoverage)
-	SETUP_TARGET_FOR_COVERAGE_COBERTURA(tests_coverage tests cobertura "\"(.*lib.*|.*tests.*|.*main.cpp)\"")
+	if(CMAKE_BUILD_TYPE MATCHES Coverage)
+
+		include(CodeCoverage)
+
+		SETUP_TARGET_FOR_COVERAGE_COBERTURA(tests_coverage tests cobertura "\"(.*lib.*|.*tests.*|.*main.cpp)\"")
+
+		# Setting flags for coverage test
+		set(CMAKE_CXX_FLAGS_DEBUG " -g -O0 -fprofile-arcs -ftest-coverage ${CMAKE_CXX_FLAGS_DEBUG}")
+		set(CMAKE_C_FLAGS_DEBUG " -g -O0 -fprofile-arcs -ftest-coverage ${CMAKE_C_FLAGS_DEBUG}")
+	endif()
 endif()
 
 
