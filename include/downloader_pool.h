@@ -42,13 +42,15 @@ namespace Downloaders::Concurrency
 
 
 		// Creational method for heap-only allocation
-		static CConcurrentDownloader *AllocatePool(FSocketFactory fFactory, unsigned uCountOfThreads = 0) noexcept
+		static std::unique_ptr<CConcurrentDownloader> AllocatePool(FSocketFactory fFactory, unsigned uCountOfThreads = 0) noexcept
 		{
 			if(uCountOfThreads == 0)
 			{
-				return new(std::nothrow) CConcurrentDownloader(fFactory);
+				return std::unique_ptr<CConcurrentDownloader>(
+					new(std::nothrow) CConcurrentDownloader(fFactory));
 			}
-			return new(std::nothrow) CConcurrentDownloader(fFactory, uCountOfThreads);
+			return std::unique_ptr<CConcurrentDownloader>(
+				new(std::nothrow) CConcurrentDownloader(fFactory, uCountOfThreads));
 		}
 
 		/// Function to add new URI for download
