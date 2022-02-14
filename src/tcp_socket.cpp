@@ -66,9 +66,9 @@ bool Sockets::CTcpSocket::Connect(const CURI &cURIToConnect) noexcept
 
 	// Resolving all possble addresses for given host
 	// Trying to connect to given addresses
+	bool bIsConnected{false};
 	if(const auto cAddresses = GetHostAddresses(cURIToConnect))
 	{
-		bool bIsConnected{false};
 		for(addrinfo *pAddr = cAddresses->get(); 
 			pAddr != nullptr; pAddr = pAddr->ai_next)
 		{
@@ -83,13 +83,14 @@ bool Sockets::CTcpSocket::Connect(const CURI &cURIToConnect) noexcept
 				break;
 			}
 		}
+	}
 
-		if(!bIsConnected)
-		{
-			fprintf(stderr, "Failed to connect to given host\n");
-			close(m_iSocketFD);
-			return false;
-		}
+	if(!bIsConnected)
+	{
+		fprintf(stderr, "Failed to connect to given host\n");
+		close(m_iSocketFD);
+		m_iSocketFD = -1;
+		return false;
 	}
 
 	return true;
@@ -265,13 +266,6 @@ bool Sockets::CTcpSocket::Write(const char *pcchBytes, size_t nCount) noexcept
 		fprintf(stderr, "The given socket doesn't exist or it's not opened\n");
 		return false;
 	}
-
-	fprintf(stderr, "Writing:\n");
-	for(size_t i = 0; i < nCount; i++)
-	{
-		fprintf(stderr, "%c", pcchBytes[i]);
-	}
-	fprintf(stderr, "\n");
 
 	size_t nBytesToSend = nCount;
 	while(nBytesToSend != 0)
